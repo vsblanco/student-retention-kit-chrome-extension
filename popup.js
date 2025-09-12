@@ -246,6 +246,9 @@ async function displayMasterList() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // The logic to apply a cached background image has been removed.
+  // The background is now handled entirely by the CSS file.
+
   let isStarted;
   const manifest = chrome.runtime.getManifest();
   document.getElementById('version-display').textContent = `Version ${manifest.version}`;
@@ -371,13 +374,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const tabs = document.querySelectorAll('.tab-button');
   const panes = document.querySelectorAll('.tab-content');
+
   tabs.forEach(btn => {
-    btn.addEventListener('click', () => {
-      tabs.forEach(b => b.classList.remove('active'));
-      panes.forEach(p => p.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById(btn.dataset.tab).classList.add('active');
-    });
+      btn.addEventListener('click', () => {
+          tabs.forEach(b => b.classList.remove('active'));
+          panes.forEach(p => p.classList.remove('active'));
+
+          btn.classList.add('active');
+          document.getElementById(btn.dataset.tab).classList.add('active');
+      });
   });
 
   const concurrentTabsInput = document.getElementById('concurrentTabsInput');
@@ -402,15 +407,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
-  // --- UPDATED SETTING LOGIC ---
   if (looperDaysOutFilterInput) {
       chrome.storage.local.get({ looperDaysOutFilter: 'all' }, (data) => {
-          // If the stored value is 'all', show an empty input box.
           looperDaysOutFilterInput.value = data.looperDaysOutFilter === 'all' ? '' : data.looperDaysOutFilter;
       });
       looperDaysOutFilterInput.addEventListener('change', (event) => {
-          // Save the exact value, which can be an empty string.
-          // The looper will interpret '' or 'all' as the default.
           const value = event.target.value.trim();
           chrome.storage.local.set({ looperDaysOutFilter: value });
       });
@@ -471,17 +472,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const startBtn = document.getElementById('startBtn');
   const startBtnText = document.getElementById('startBtnText');
+  
   function updateButtonState(state) {
     isStarted = (state === 'on');
     if (isStarted) {
-      startBtn.style.backgroundColor = 'var(--light-accent-color)';
+      startBtn.classList.add('active');
       startBtnText.textContent = 'Stop';
     } else {
-      startBtn.style.backgroundColor = 'var(--accent-color)';
+      startBtn.classList.remove('active');
       startBtnText.textContent = 'Start';
     }
     updateLoopCounter();
   }
+
   if (startBtn && startBtnText) {
     chrome.storage.local.get({ extensionState: 'off' }, data => { updateButtonState(data.extensionState); });
     startBtn.addEventListener('click', (event) => {

@@ -70,6 +70,7 @@
       urlObject.searchParams.delete('looper');
       const cleanUrl = urlObject.href;
 
+      // Create the entry object here, grade will be added later
       foundEntry = {
           name: studentName,
           time: timeStr,
@@ -79,23 +80,57 @@
     }
   }
 
-  // --- REVISED FUNCTION TO AVOID BACKGROUND THROTTLING ---
-  // This version uses a single, synchronous loop instead of setTimeout,
-  // which ensures it runs at full speed even in background tabs.
   function walkTheDOM(root) {
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     let node;
     while (!keywordFound && (node = walker.nextNode())) {
         highlightAndNotify(node);
     }
-    // After the loop is done (either by finding the keyword or finishing the page),
-    // call finishCheck.
+    // After the entire DOM has been checked, call finishCheck.
     finishCheck();
   }
 
+  // --- UPDATED: This function now polls for the grade after the keyword is found ---
   function finishCheck() {
-    if (isLooperRun) {
-        chrome.runtime.sendMessage({ action: 'inspectionResult', found: keywordFound, entry: foundEntry });
+    if (!isLooperRun) return;
+
+    if (keywordFound) {
+      // If the keyword was found, poll for the grade element.
+      let attempts = 0;
+      const maxAttempts = 15; // Try for up to 3 seconds
+      const interval = 200;   // every 200ms
+
+      const gradeFinder = setInterval(() => {
+        const finalGradeContainer = document.querySelector('.student_assignment.final_grade');
+        let gradeFound = false;
+
+        if (finalGradeContainer) {
+          const textContent = finalGradeContainer.textContent;
+          const gradeMatch = textContent.match(/(\d+\.?\d*)\s*%/);
+          
+          if (gradeMatch && gradeMatch[1]) {
+            const gradeValue = parseFloat(gradeMatch[1]);
+            if (!isNaN(gradeValue)) {
+              foundEntry.grade = gradeValue;
+              gradeFound = true;
+            }
+          }
+        }
+
+        if (gradeFound || attempts >= maxAttempts) {
+          clearInterval(gradeFinder);
+          if (!gradeFound) {
+            console.log('Grade not found after polling, sending N/A.');
+            foundEntry.grade = 'N/A';
+          }
+          chrome.runtime.sendMessage({ action: 'inspectionResult', found: true, entry: foundEntry });
+        }
+
+        attempts++;
+      }, interval);
+    } else {
+      // Keyword was not found, send result immediately.
+      chrome.runtime.sendMessage({ action: 'inspectionResult', found: false, entry: null });
     }
   }
 

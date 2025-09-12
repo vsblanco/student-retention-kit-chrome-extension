@@ -62,7 +62,6 @@ async function addStudentToFoundList(entry) {
     
     map.set(entry.url, entry);
     
-    // Update the live URL cache in the looper immediately.
     addToFoundUrlCache(entry.url);
     
     await chrome.storage.local.set({ foundEntries: Array.from(map.values()) });
@@ -88,11 +87,11 @@ chrome.storage.local.get('extensionState', data => handleStateChange(data.extens
 chrome.runtime.onMessage.addListener(async (msg, sender) => {
   if (msg.action === 'inspectionResult') {
     if (msg.found && msg.entry) {
-        // We use the entry's URL as the unique key now.
         await addStudentToFoundList(msg.entry);
 
-        const { name, url, timestamp } = msg.entry;
-        triggerPowerAutomate({ name, url, timestamp });
+        // --- UPDATED: Destructure grade and include it in the payload ---
+        const { name, url, timestamp, grade } = msg.entry;
+        triggerPowerAutomate({ name, url, timestamp, grade });
     }
 
     if (sender.tab?.id) {
