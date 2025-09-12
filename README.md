@@ -1,8 +1,3 @@
-\<\!--  
-Timestamp: 2025-09-12 16:24 PM  
-Version: 1.0  
-\--\>
-
 # **Submission Checker for Canvas**
 
 The **Submission Checker** is a powerful Chrome Extension designed to automate and streamline the process of checking for student submissions within the Canvas Learning Management System. It automatically loops through a list of student gradebook pages, identifies new submissions based on a specific keyword (like the date), and provides robust tools for managing and acting on these findings.
