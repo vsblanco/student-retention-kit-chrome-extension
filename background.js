@@ -3,9 +3,15 @@
 import { startLoop, stopLoop, processNextInQueue, addToFoundUrlCache } from './looper.js';
 import { SUBMISSION_FOUND_URL } from './constants.js';
 
-chrome.commands.onCommand.addListener((command) => {
+// Open the side panel on action click
+chrome.action.onClicked.addListener((tab) => {
+  chrome.sidePanel.open({ windowId: tab.windowId });
+});
+
+// Also handle the keyboard shortcut
+chrome.commands.onCommand.addListener((command, tab) => {
   if (command === '_execute_action') {
-    chrome.storage.local.set({ openAction: 'focusMasterSearch' });
+    chrome.sidePanel.open({ windowId: tab.windowId });
   }
 });
 
@@ -89,7 +95,6 @@ chrome.runtime.onMessage.addListener(async (msg, sender) => {
     if (msg.found && msg.entry) {
         await addStudentToFoundList(msg.entry);
 
-        // --- UPDATED: Destructure grade and include it in the payload ---
         const { name, url, timestamp, grade } = msg.entry;
         triggerPowerAutomate({ name, url, timestamp, grade });
     }

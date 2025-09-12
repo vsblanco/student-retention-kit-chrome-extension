@@ -36,6 +36,7 @@
         <span class="badge"><span class="count">0</span></span>
       </button>
       <button class="tab-button" data-tab="settings">Settings</button>
+      <button class="tab-button" data-tab="about">About</button>
     </div>
     
     <div id="found" class="tab-content active">
@@ -47,7 +48,7 @@
     </div>
     <div id="master" class="tab-content">
       <button id="updateMasterBtn">Update Master List</button>
-      <input type="text" id="newItemInput" placeholder="Search Name or Phone..." />
+      <input type="text" id="newItemInput" placeholder="Search Name or Days Out..." />
       <div class="filter-section">
           <button id="nameSortBtn" class="filter-button">Sort by Name</button>
           <button id="daysOutSortBtn" class="filter-button">Sort by Days Out</button>
@@ -61,52 +62,108 @@
     </div>
     
     <div id="settings" class="tab-content">
-      <div class="settings-scroll-container">
-        <div class="section">
-          <h3>Settings</h3>
-          <div class="setting-item">
-              <label for="concurrentTabsInput">Concurrent Tabs (1-10)</label>
-              <input type="number" id="concurrentTabsInput" min="1" max="10">
-          </div>
-          <div class="setting-item">
-              <label for="looperDaysOutFilterInput">Loop Filter: Days Out</label>
-              <input type="text" id="looperDaysOutFilterInput" placeholder="e.g., >=5 or all">
-          </div>
-          <div class="setting-item">
-              <label for="embedToggle">Embed in Canvas</label>
-              <label class="switch">
-                <input type="checkbox" id="embedToggle">
-                <span class="slider round"></span>
-              </label>
-          </div>
-          <div class="setting-item">
-              <label for="showPhoneToggle">Show Phone Numbers</label>
-              <label class="switch">
-                <input type="checkbox" id="showPhoneToggle">
-                <span class="slider round"></span>
-              </label>
-          </div>
-          <div class="setting-item">
-              <label for="colorPicker">Highlight Color</label>
-              <input type="color" id="colorPicker" value="#ffff00">
-          </div>
-          <div class="setting-item">
-              <label for="customKeywordInput">Custom Keyword</label>
-              <input type="text" id="customKeywordInput" placeholder="Default: Today's Date">
-          </div>
-          <div class="setting-item">
-              <label for="debugToggle">Debug Mode</label>
-              <label class="switch">
-                <input type="checkbox" id="debugToggle">
-                <span class="slider round"></span>
-              </label>
-          </div>
+        <div class="settings-scroll-container">
+            <div class="section">
+                <h3>Settings</h3>
+                <div class="setting-item">
+                    <label for="concurrentTabsInput">Concurrent Tabs (1-10)</label>
+                    <input type="number" id="concurrentTabsInput" min="1" max="10">
+                </div>
+                <div class="setting-item">
+                    <label for="looperDaysOutFilterInput">Loop Filter: Days Out</label>
+                    <input type="text" id="looperDaysOutFilterInput" placeholder="e.g., >=5 or all">
+                </div>
+                <div class="setting-item">
+                    <label for="customKeywordInput">Custom Keyword</label>
+                    <input type="text" id="customKeywordInput" placeholder="Default: Today's Date">
+                </div>
+                <div class="setting-item">
+                    <label for="colorPicker">Highlight Color</label>
+                    <input type="color" id="colorPicker" value="#ffff00">
+                </div>
+                <div class="setting-item">
+                    <label for="debugToggle">Debug Mode</label>
+                    <label class="switch">
+                        <input type="checkbox" id="debugToggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <h4 style="margin-top: 20px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 15px;">Experimental Features</h4>
+                <div class="setting-item" style="border-top: none; padding-top: 5px;">
+                    <label for="embedToggle">Embed in Canvas</label>
+                    <label class="switch">
+                        <input type="checkbox" id="embedToggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
         </div>
-      </div>
-      <button id="sharepointBtn" class="footer-link">SharePoint</button>
+        <button id="sharepointBtn" class="footer-link">SharePoint</button>
+    </div>
+
+    <div id="about" class="tab-content">
+        <div class="settings-scroll-container">
+            <div class="section">
+                <h3>About This Extension</h3>
+                <p>This extension is designed to streamline the process of checking for student submissions in Canvas.</p>
+
+                <h4>Core Functionality</h4>
+                <ul>
+                    <li><strong>Automated Checking:</strong> When you press the "Start" button, the extension opens student gradebook pages in the background based on the "Master List". It checks for a specific keyword (today's date by default, or a custom keyword) to see if a submission has been made.</li>
+                    <li><strong>Found List:</strong> When a submission is found, the student is added to the "Found" list, and a notification is sent to a Power Automate flow.</li>
+                    <li><strong>Master List:</strong> This is the list of all students the extension will check. You can update this list by copying a JSON array from your clipboard and clicking "Update Master List". The JSON must be an array of objects with specific keys.</li>
+                </ul>
+
+                <h4>Master List JSON Format</h4>
+                <p>The JSON you copy to your clipboard must be an array of student objects. The following keys are used:</p>
+                <ul>
+                    <li><code>StudentName</code>: (Required) The full name of the student.</li>
+                    <li><code>GradeBook</code>: (Required) The direct URL to the student's gradebook page.</li>
+                    <li><code>DaysOut</code>: (Optional) The number of days since the last submission.</li>
+                    <li><code>LDA</code>: (Optional) The last date of attendance.</li>
+                    <li><code>Grade</code>: (Optional) The student's current grade.</li>
+                </ul>
+                <button id="showJsonExampleBtn" class="filter-button" style="margin-top: 10px; width: 180px;">Show JSON Example</button>
+
+                <h4>Key Scripts</h4>
+                <ul>
+                    <li><code>popup.js</code>: Manages the user interface and interactions in this popup.</li>
+                    <li><code>background.js</code>: Handles the main logic for starting/stopping the checking loop.</li>
+                    <li><code>looper.js</code>: Manages opening tabs and iterating through the master list.</li>
+                    <li><code>content.js</code>: Injected into Canvas pages to find the keyword.</li>
+                    <li><code>gradebook_injector.js</code>: Adds a student search bar to the Canvas gradebook.</li>
+                </ul>
+            </div>
+        </div>
     </div>
 
   </div>
+
+  <!-- Modal Structure -->
+  <div id="json-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <span class="modal-close">&times;</span>
+      <h3>JSON Example</h3>
+      <pre><code>[
+  {
+    "StudentName": "John Doe",
+    "GradeBook": "https://nuc.instructure.com/courses/123/grades/456",
+    "DaysOut": 3,
+    "LDA": "2024-07-20",
+    "Grade": "95%"
+  },
+  {
+    "StudentName": "Jane Smith",
+    "GradeBook": "https://nuc.instructure.com/courses/123/grades/789",
+    "DaysOut": 12,
+    "LDA": "2024-07-10",
+    "Grade": "88%"
+  }
+]</code></pre>
+    </div>
+  </div>
+
   <script src="popup.js" type="module"></script>
   <script src="popupSearch.js" type="module"></script>
 </body>

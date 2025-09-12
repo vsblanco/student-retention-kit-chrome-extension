@@ -1,6 +1,6 @@
 // popup.js
 
-import { MASTER_LIST_URL } from './constants.js';
+// MASTER_LIST_URL is no longer needed and has been removed.
 
 function getDaysOutStyle(daysout) {
     if (daysout == null) return {};
@@ -52,7 +52,6 @@ export function renderFoundList(entries) {
     a.addEventListener('click', e => {
       e.preventDefault();
       chrome.tabs.create({ url });
-      window.close();
     });
     li.appendChild(a);
     if (time) {
@@ -79,7 +78,6 @@ export function renderMasterList(entries, showPhones) {
       a.addEventListener('click', e => {
         e.preventDefault();
         chrome.tabs.create({ url });
-        window.close();
       });
       li.appendChild(a);
     } else {
@@ -113,25 +111,50 @@ export function renderMasterList(entries, showPhones) {
   });
 }
 
-async function updateMaster() {
+/**
+ * --- NEW FUNCTION ---
+ * Reads JSON from the clipboard to update the master list.
+ */
+async function updateMasterFromClipboard() {
+  const updateBtn = document.getElementById('updateMasterBtn');
   const list = document.getElementById('masterList');
-  list.innerHTML = '<li>Loading…</li>';
+  
+  // Reset button state and provide user feedback
+  updateBtn.classList.remove('btn-success', 'btn-error');
+  updateBtn.textContent = 'Processing...';
+  list.innerHTML = '<li>Reading from clipboard...</li>';
+
   try {
-    const resp = await fetch(MASTER_LIST_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: '{}'
-    });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const data = await resp.json();
-    const students = data.students || [];
-    const entries = students.map(s => ({
-      name: s.name,
-      time: s.time || '',
-      url:  s.url,
-      phone: s.phone || '',
-      daysout: s.daysout
-    }));
+    const clipboardText = await navigator.clipboard.readText();
+    if (!clipboardText) {
+      throw new Error("Clipboard is empty.");
+    }
+    
+    const data = JSON.parse(clipboardText);
+
+    if (!Array.isArray(data)) {
+      throw new Error("Clipboard data is not a valid JSON array.");
+    }
+
+    // Map the new clipboard format to the extension's internal format
+    const entries = data.map(s => {
+        if (!s.StudentName || !s.GradeBook) {
+            console.warn("Skipping invalid entry:", s);
+            return null;
+        }
+        return {
+          name: s.StudentName,
+          url: s.GradeBook,
+          daysout: s.DaysOut,
+          // Add other fields from your JSON for future use if needed
+          lda: s.LDA,
+          grade: s.Grade,
+          // Ensure old fields have default values
+          phone: '', 
+          time: ''
+        };
+    }).filter(Boolean); // Filter out any null entries that were skipped
+
     const now = new Date();
     const timestampStr = now.toLocaleDateString('en-US', {
         month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
@@ -139,15 +162,31 @@ async function updateMaster() {
     
     await new Promise(res => chrome.storage.local.set({ masterEntries: entries, lastUpdated: timestampStr }, res));
     
-    displayMasterList();
+    displayMasterList(); // Refresh the list in the UI
     
     const lastUpdatedSpan = document.getElementById('lastUpdatedTime');
     if(lastUpdatedSpan) lastUpdatedSpan.textContent = `Last updated: ${timestampStr}`;
+
+    // Success visual cue
+    updateBtn.classList.add('btn-success');
+    updateBtn.textContent = `Success! ${entries.length} students loaded.`;
+
   } catch (e) {
-    console.error('Failed to update master list', e);
-    list.innerHTML = '<li>Error loading list</li>';
+    console.error('Failed to update master list from clipboard', e);
+    
+    // Error visual cue
+    updateBtn.classList.add('btn-error');
+    updateBtn.textContent = 'Error: Invalid clipboard data.';
+    list.innerHTML = '<li>Error loading list. Please copy the correct JSON data and try again.</li>';
+  } finally {
+    // Reset button text after a delay to allow user to see the status
+    setTimeout(() => {
+        updateBtn.classList.remove('btn-success', 'btn-error');
+        updateBtn.textContent = 'Update Master List';
+    }, 4000);
   }
 }
+
 
 function createRipple(event) {
     const button = event.currentTarget;
@@ -165,23 +204,16 @@ function createRipple(event) {
     }, 600);
 }
 
-function updateSearchPlaceholder(showPhones) {
-    const searchInput = document.getElementById('newItemInput');
-    if (searchInput) {
-        searchInput.placeholder = showPhones ? 'Search Name or Phone...' : 'Search Name or Days Out...';
-    }
-}
-
 let activeSort = {
     criterion: 'none',
     direction: 'none'
 };
 
 async function displayMasterList() {
-    const { masterEntries = [], showPhoneNumbers = true } = await chrome.storage.local.get(['masterEntries', 'showPhoneNumbers']);
+    const { masterEntries = [] } = await chrome.storage.local.get(['masterEntries']);
     
     const searchInput = document.getElementById('newItemInput');
-    const term = searchInput.value.trim();
+    const term = searchInput ? searchInput.value.trim() : '';
     const lowerTerm = term.toLowerCase();
 
     const advancedFilterRegex = /^\s*([><]=?|=)\s*(\d+)\s*$/;
@@ -210,17 +242,10 @@ async function displayMasterList() {
         const nameMatch = entry.name.toLowerCase().includes(lowerTerm);
         let extraMatch = false;
         
-        if (showPhoneNumbers) {
-            const numericTerm = term.replace(/[^0-9]/g, '');
-            if (entry.phone && numericTerm.length > 0) {
-                const numericPhone = entry.phone.replace(/[^0-9]/g, '');
-                extraMatch = numericPhone.includes(numericTerm);
-            }
-        } else {
-            if (entry.daysout != null && !isNaN(term) && term !== '') {
-                 extraMatch = String(entry.daysout) === term;
-            }
+        if (entry.daysout != null && !isNaN(term) && term !== '') {
+             extraMatch = String(entry.daysout) === term;
         }
+        
         return nameMatch || extraMatch;
     });
 
@@ -239,16 +264,35 @@ async function displayMasterList() {
         });
     }
 
-    renderMasterList(finalEntries, showPhoneNumbers);
+    renderMasterList(finalEntries, false); // Always pass false for showPhones
 
     const badge = document.querySelector('.tab-button[data-tab="master"] .count');
     if (badge) badge.textContent = finalEntries.length;
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  // The logic to apply a cached background image has been removed.
-  // The background is now handled entirely by the CSS file.
+function switchTab(tabName) {
+    const tabs = document.querySelectorAll('.tab-button');
+    const panes = document.querySelectorAll('.tab-content');
+    
+    tabs.forEach(btn => {
+        const isActive = btn.dataset.tab === tabName;
+        btn.classList.toggle('active', isActive);
+    });
 
+    panes.forEach(pane => {
+        const isActive = pane.id === tabName;
+        if (isActive) {
+            pane.style.display = 'flex';
+            pane.classList.add('active');
+        } else {
+            pane.style.display = 'none';
+            pane.classList.remove('active');
+        }
+    });
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
   let isStarted;
   const manifest = chrome.runtime.getManifest();
   document.getElementById('version-display').textContent = `Version ${manifest.version}`;
@@ -369,26 +413,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('updateMasterBtn').addEventListener('click', (event) => {
     createRipple(event);
-    updateMaster();
+    updateMasterFromClipboard();
   });
 
-  const tabs = document.querySelectorAll('.tab-button');
-  const panes = document.querySelectorAll('.tab-content');
-
-  tabs.forEach(btn => {
-      btn.addEventListener('click', () => {
-          tabs.forEach(b => b.classList.remove('active'));
-          panes.forEach(p => p.classList.remove('active'));
-
-          btn.classList.add('active');
-          document.getElementById(btn.dataset.tab).classList.add('active');
+  const tabContainer = document.querySelector('.tabs');
+  if (tabContainer) {
+      tabContainer.addEventListener('click', (event) => {
+          const tabButton = event.target.closest('.tab-button');
+          if (tabButton && tabButton.dataset.tab) {
+              switchTab(tabButton.dataset.tab);
+          }
       });
+  }
+
+  // --- Modal Logic ---
+  const modal = document.getElementById('json-modal');
+  const showJsonBtn = document.getElementById('showJsonExampleBtn');
+  const closeBtn = document.querySelector('.modal-close');
+
+  if(showJsonBtn) {
+    showJsonBtn.addEventListener('click', () => {
+      if(modal) modal.style.display = 'flex';
+    });
+  }
+  if(closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      if(modal) modal.style.display = 'none';
+    });
+  }
+  window.addEventListener('click', (event) => {
+    if (event.target == modal) {
+      modal.style.display = 'none';
+    }
   });
+  // --- End Modal Logic ---
 
   const concurrentTabsInput = document.getElementById('concurrentTabsInput');
   const looperDaysOutFilterInput = document.getElementById('looperDaysOutFilterInput');
   const embedToggle = document.getElementById('embedToggle');
-  const showPhoneToggle = document.getElementById('showPhoneToggle');
   const colorPicker = document.getElementById('colorPicker');
   const customKeywordInput = document.getElementById('customKeywordInput');
   const debugToggle = document.getElementById('debugToggle');
@@ -425,20 +487,6 @@ document.addEventListener('DOMContentLoaded', () => {
       chrome.storage.local.set({ embedInCanvas: event.target.checked });
     });
   }
-  
-  if (showPhoneToggle) {
-    chrome.storage.local.get({ showPhoneNumbers: true }, (data) => {
-      showPhoneToggle.checked = data.showPhoneNumbers;
-      updateSearchPlaceholder(data.showPhoneNumbers);
-    });
-    showPhoneToggle.addEventListener('change', (event) => {
-      const isEnabled = event.target.checked;
-      updateSearchPlaceholder(isEnabled);
-      chrome.storage.local.set({ showPhoneNumbers: isEnabled }, () => {
-          displayMasterList();
-      });
-    });
-  }
 
   if (colorPicker) {
     chrome.storage.local.get({ highlightColor: '#ffff00' }, (data) => { colorPicker.value = data.highlightColor; });
@@ -466,7 +514,6 @@ document.addEventListener('DOMContentLoaded', () => {
     sharepointBtn.addEventListener('click', (event) => {
         createRipple(event);
         chrome.tabs.create({ url: "https://edukgroup365.sharepoint.com/sites/SM-StudentServices/SitePages/CollabHome.aspx" });
-        window.close();
     });
   }
 
@@ -494,4 +541,6 @@ document.addEventListener('DOMContentLoaded', () => {
       updateButtonState(newState);
     });
   }
+
+  switchTab('found');
 });

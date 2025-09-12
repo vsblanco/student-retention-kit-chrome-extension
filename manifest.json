@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Submission Checker",
-  "version": "5.0",
-  "description": "Highlights today’s date, triggers flows, manages Found & Master lists",
+  "version": "6.0",
+  "description": "Highlights today’s date, triggers flows, manages Found & Master lists in the side panel.",
   "icons": {
     "16": "icon.png",
     "48": "icon.png",
@@ -11,7 +11,9 @@
   "permissions": [
     "storage",
     "tabs",
-    "alarms"
+    "alarms",
+    "sidePanel",
+    "clipboardRead"
   ],
   "host_permissions": [
     "https://prod-12.westus.logic.azure.com/*",
@@ -34,13 +36,16 @@
     }
   ],
   "action": {
-    "default_popup": "popup.html",
-    "default_icon": "icon.png"
+    "default_icon": "icon.png",
+    "default_title": "Open Submission Checker"
+  },
+  "side_panel": {
+    "default_path": "popup.html"
   },
   "web_accessible_resources": [
     {
       "resources": [
-        "liquid-glass.css", 
+        "liquid-glass.css",
         "assets/pictures/powericon.png",
         "assets/pictures/background.png",
         "icon.png"
@@ -54,7 +59,7 @@
         "default": "Alt+S",
         "mac": "Alt+S"
       },
-      "description": "Open the popup and focus Master List search."
+      "description": "Open the Submission Checker side panel."
     }
   }
 }
