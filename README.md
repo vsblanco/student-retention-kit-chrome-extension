@@ -31,8 +31,8 @@ Since this is a custom extension, it needs to be loaded into Chrome in Developer
 The extension relies on a "Master List" of students formatted as a JSON array. Each object in the array represents one student.
 
 Create your list using the following structure:
-
-\[  
+```
+[  
   {  
     "StudentName": "Doe, Jane",  
     "GradeBook": "\[https://nuc.instructure.com/courses/123/grades/456\](https://nuc.instructure.com/courses/123/grades/456)",  
@@ -47,8 +47,8 @@ Create your list using the following structure:
     "LDA": "2023-10-16T11:30:00Z",  
     "Grade": "88%"  
   }  
-\]
-
+]
+```
 * StudentName: The full name of the student.  
 * GradeBook: The direct URL to the student's individual gradebook page in Canvas.  
 * DaysOut, LDA, Grade: Additional data that can be used for display and filtering.
@@ -79,7 +79,7 @@ In the **"Settings"** tab, you can customize the extension's behavior:
 ## **🔗 Connections (Advanced)**
 
 In the Settings tab, you can create connections to send data to external services whenever a submission is found. The following payload is sent:
-
+```
 {  
   "name": "Doe, Jane",  
   "time": "4:24 PM",  
@@ -87,7 +87,7 @@ In the Settings tab, you can create connections to send data to external service
   "timestamp": "2025-09-12T20:24:00.000Z",  
   "grade": 95.0  
 }
-
+```
 ### **Power Automate**
 
 * In Power Automate, create a new flow using the **"When an HTTP request is received"** trigger.  
