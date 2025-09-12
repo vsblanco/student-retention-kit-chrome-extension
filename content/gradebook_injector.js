@@ -1,9 +1,18 @@
-// gradebook_injector.js
+/*
+* Timestamp: 2025-09-12 17:01 PM
+* Version: 8.0
+*/
 
+// Note: Cannot use ES6 modules in content scripts directly.
 (function() {
+    const STORAGE_KEYS = {
+        EMBED_IN_CANVAS: 'embedInCanvas',
+        MASTER_ENTRIES: 'masterEntries'
+    };
+
     // Only run this script if the setting is enabled
-    chrome.storage.local.get({ embedInCanvas: true }, (settings) => {
-        if (!settings.embedInCanvas) {
+    chrome.storage.local.get({ [STORAGE_KEYS.EMBED_IN_CANVAS]: true }, (settings) => {
+        if (!settings[STORAGE_KEYS.EMBED_IN_CANVAS]) {
             console.log("Embed in Canvas is disabled. Injector will not run.");
             return;
         }
@@ -58,8 +67,8 @@
     }
 
     function addSearchFunctionality(searchInput, dropdown) {
-        chrome.storage.local.get({ masterEntries: [] }, (data) => {
-            const masterList = data.masterEntries;
+        chrome.storage.local.get({ [STORAGE_KEYS.MASTER_ENTRIES]: [] }, (data) => {
+            const masterList = data[STORAGE_KEYS.MASTER_ENTRIES];
             searchInput.addEventListener('input', () => {
                 const term = searchInput.value.trim();
                 const lowerTerm = term.toLowerCase();
@@ -85,10 +94,7 @@
 
                 if (filtered.length > 0) {
                     filtered.forEach(student => {
-                        // --- THIS IS THE NEW LOGIC ---
-                        // Check if the URL is valid
                         if (student.url && student.url !== '#N/A' && student.url.startsWith('http')) {
-                            // Valid URL: create a clickable link
                             const link = document.createElement('a');
                             link.href = student.url;
                             link.textContent = student.name;
@@ -98,7 +104,6 @@
                             });
                             dropdown.appendChild(link);
                         } else {
-                            // Invalid URL: create a non-clickable, gray div with a tooltip
                             const invalidEntry = document.createElement('div');
                             invalidEntry.textContent = student.name;
                             invalidEntry.style.color = '#888';

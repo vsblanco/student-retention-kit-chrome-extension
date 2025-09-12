@@ -1,6 +1,58 @@
-// constants.js
+/*
+* Timestamp: 2025-09-12 17:17 PM
+* Version: 8.0
+*/
 
-// The MASTER_LIST_URL constant has been removed as it is no longer used.
+// Centralized configuration for the Submission Checker extension.
 
-// URL to trigger a flow when a submission is found. Used in background.js.
-export const SUBMISSION_FOUND_URL = "https://89accd45d248e9efb430b0b82f72c5.07.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/395230c61f2d4e5281e05e8036eca35e/triggers/manual/paths/invoke/?api-version=1&tenantId=tId&environmentName=89accd45-d248-e9ef-b430-b0b82f72c507&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=B9j31UYhOFTsz6yV51Isi2tKEMiU5WGQFmY2YTw1yis";
+/**
+ * An enum-like object for the different checker modes.
+ */
+export const CHECKER_MODES = {
+    SUBMISSION: 'submission',
+    MISSING: 'missing'
+};
+
+/**
+ * Keys for data stored in chrome.storage.local.
+ */
+export const STORAGE_KEYS = {
+    EXTENSION_STATE: 'extensionState',
+    FOUND_ENTRIES: 'foundEntries',
+    MASTER_ENTRIES: 'masterEntries',
+    LAST_UPDATED: 'lastUpdated',
+    LOOP_STATUS: 'loopStatus',
+    CONNECTIONS: 'connections',
+    DEBUG_MODE: 'debugMode',
+    // Settings
+    CHECKER_MODE: 'checkerMode', // <-- NEW
+    CONCURRENT_TABS: 'concurrentTabs',
+    HIGHLIGHT_COLOR: 'highlightColor',
+    CUSTOM_KEYWORD: 'customKeyword',
+    LOOPER_DAYS_OUT_FILTER: 'looperDaysOutFilter',
+    EMBED_IN_CANVAS: 'embedInCanvas',
+};
+
+/**
+ * Default values for all extension settings.
+ */
+export const DEFAULT_SETTINGS = {
+    [STORAGE_KEYS.CHECKER_MODE]: CHECKER_MODES.SUBMISSION, // <-- NEW
+    [STORAGE_KEYS.CONCURRENT_TABS]: 3,
+    [STORAGE_KEYS.HIGHLIGHT_COLOR]: '#ffff00',
+    [STORAGE_KEYS.CUSTOM_KEYWORD]: '',
+    [STORAGE_KEYS.LOOPER_DAYS_OUT_FILTER]: 'all',
+    [STORAGE_KEYS.DEBUG_MODE]: false,
+    [STORAGE_KEYS.EMBED_IN_CANVAS]: true,
+};
+
+/**
+ * Regular expression for parsing advanced filter queries like '>=5' or '<10'.
+ */
+export const ADVANCED_FILTER_REGEX = /^\s*([><]=?|=)\s*(\d+)\s*$/;
+
+/**
+ * SharePoint URL for the "SharePoint" button in the settings tab.
+ */
+export const SHAREPOINT_URL = "https://edukgroup3_sharepoint.com/sites/SM-StudentServices/SitePages/CollabHome.aspx";
+

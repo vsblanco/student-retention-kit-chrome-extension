@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Submission Checker",
-  "version": "7.0",
+  "version": "8.0",
   "description": "Highlights today’s date, triggers flows, manages Found & Master lists in the side panel.",
   "icons": {
     "16": "icon.png",
@@ -13,24 +13,25 @@
     "tabs",
     "alarms",
     "sidePanel",
-    "clipboardRead"
+    "clipboardRead",
+    "offscreen"
   ],
   "host_permissions": [
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "background.js",
+    "service_worker": "background/background.js",
     "type": "module"
   },
   "content_scripts": [
     {
       "matches": ["https://nuc.instructure.com/courses/*"],
-      "js": ["content.js"],
+      "js": ["content/content.js"],
       "run_at": "document_idle"
     },
     {
       "matches": ["https://nuc.instructure.com/courses/*/grades/*"],
-      "js": ["gradebook_injector.js"],
+      "js": ["content/gradebook_injector.js"],
       "run_at": "document_idle"
     }
   ],
@@ -39,17 +40,18 @@
     "default_title": "Open Submission Checker"
   },
   "side_panel": {
-    "default_path": "popup.html"
+    "default_path": "sidepanel/popup.html"
   },
   "web_accessible_resources": [
     {
       "resources": [
-        "liquid-glass.css",
+        "sidepanel/liquid-glass.css",
         "assets/pictures/powericon.png",
+        "assets/pictures/power-automate-icon.png",
         "assets/pictures/pusher-icon.png",
         "assets/pictures/background.png",
         "icon.png",
-        "pusher.min.js"
+        "lib/pusher.min.js"
       ],
       "matches": ["<all_urls>"]
     }
@@ -62,6 +64,7 @@
       },
       "description": "Open the Submission Checker side panel."
     }
-  }
+  },
+  "minimum_chrome_version": "109"
 }
 

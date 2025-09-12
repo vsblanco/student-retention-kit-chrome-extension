@@ -1,4 +1,8 @@
-// popup.js
+/*
+* Timestamp: 2025-09-12 17:24 PM
+* Version: 8.0
+*/
+import { STORAGE_KEYS, DEFAULT_SETTINGS, ADVANCED_FILTER_REGEX, SHAREPOINT_URL, CHECKER_MODES } from '../constants.js';
 
 // --- RENDER FUNCTIONS ---
 export function renderFoundList(entries) {
@@ -110,11 +114,11 @@ function renderConnectionsList(connections = []) {
         detailSpan.className = 'connection-detail';
 
         if (conn.type === 'power-automate') {
-            icon.src = 'assets/pictures/power-automate-icon.png';
+            icon.src = '../assets/pictures/power-automate-icon.png';
             typeSpan.textContent = 'Power Automate';
             detailSpan.textContent = conn.name;
         } else if (conn.type === 'pusher') {
-            icon.src = 'assets/pictures/pusher-icon.png';
+            icon.src = '../assets/pictures/pusher-icon.png';
             typeSpan.textContent = 'Pusher';
             detailSpan.textContent = conn.name;
         }
@@ -190,14 +194,13 @@ let connectionToDelete = null;
 let connectionToExport = null;
 
 async function displayMasterList() {
-    const { masterEntries = [] } = await chrome.storage.local.get(['masterEntries']);
+    const { [STORAGE_KEYS.MASTER_ENTRIES]: masterEntries = [] } = await chrome.storage.local.get(STORAGE_KEYS.MASTER_ENTRIES);
     
     const searchInput = document.getElementById('newItemInput');
     const term = searchInput ? searchInput.value.trim() : '';
     const lowerTerm = term.toLowerCase();
 
-    const advancedFilterRegex = /^\s*([><]=?|=)\s*(\d+)\s*$/;
-    const advancedMatch = term.match(advancedFilterRegex);
+    const advancedMatch = term.match(ADVANCED_FILTER_REGEX);
 
     const filteredEntries = masterEntries.filter(entry => {
         if (advancedMatch) {
@@ -286,7 +289,10 @@ async function updateMasterFromClipboard() {
         month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
     }).replace(',', '');
     
-    await chrome.storage.local.set({ masterEntries: entries, lastUpdated: timestampStr });
+    await chrome.storage.local.set({ 
+        [STORAGE_KEYS.MASTER_ENTRIES]: entries, 
+        [STORAGE_KEYS.LAST_UPDATED]: timestampStr 
+    });
     
     displayMasterList();
     
@@ -484,7 +490,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let contextMenuEntry = null;
 
   function updateLoopCounter() {
-    chrome.storage.local.get(['loopStatus', 'extensionState'], ({ loopStatus, extensionState }) => {
+    chrome.storage.local.get([STORAGE_KEYS.LOOP_STATUS, STORAGE_KEYS.EXTENSION_STATE], (data) => {
+        const loopStatus = data[STORAGE_KEYS.LOOP_STATUS];
+        const extensionState = data[STORAGE_KEYS.EXTENSION_STATE];
+
         if (extensionState === 'on' && loopStatus && loopStatus.total > 0) {
             loopCounterDisplay.textContent = `${loopStatus.current} / ${loopStatus.total}`;
             loopCounterDisplay.style.display = 'block';
@@ -495,9 +504,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateKeywordDisplay() {
-    chrome.storage.local.get({ customKeyword: '' }, (data) => {
-        if (data.customKeyword) {
-            keywordDisplay.textContent = data.customKeyword;
+    chrome.storage.local.get({ [STORAGE_KEYS.CUSTOM_KEYWORD]: '' }, (data) => {
+        const customKeyword = data[STORAGE_KEYS.CUSTOM_KEYWORD];
+        if (customKeyword) {
+            keywordDisplay.textContent = customKeyword;
         } else {
             const now = new Date();
             const opts = { month: 'short', day: 'numeric' };
@@ -506,34 +516,62 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
+  function updateModeDisplay(mode) {
+    const display = document.getElementById('activeModeDisplay');
+    const keywordSection = document.querySelector('.keyword-section');
+    if (mode === CHECKER_MODES.MISSING) {
+        display.textContent = 'Missing Assignments';
+        keywordSection.style.display = 'none'; // Hide keyword when not needed
+    } else {
+        display.textContent = 'Submission Check';
+        keywordSection.style.display = 'block';
+    }
+  }
+
   // Initial Loads
   updateKeywordDisplay();
   updateLoopCounter();
   displayMasterList();
-  chrome.storage.local.get({ foundEntries: [] }, data => {
+  
+  chrome.storage.local.get({ [STORAGE_KEYS.FOUND_ENTRIES]: [] }, data => {
+    const entries = data[STORAGE_KEYS.FOUND_ENTRIES];
     const badge = document.querySelector('.tab-button[data-tab="found"] .count');
-    if(badge) badge.textContent = data.foundEntries.length;
-    renderFoundList(data.foundEntries);
+    if(badge) badge.textContent = entries.length;
+    renderFoundList(entries);
   });
-  chrome.storage.local.get(['lastUpdated'], data => {
+  
+  chrome.storage.local.get([STORAGE_KEYS.LAST_UPDATED], data => {
+    const lastUpdated = data[STORAGE_KEYS.LAST_UPDATED];
     const lastUpdatedSpan = document.getElementById('lastUpdatedTime');
-    if (lastUpdatedSpan && data.lastUpdated) { lastUpdatedSpan.textContent = `Last updated: ${data.lastUpdated}`; }
+    if (lastUpdatedSpan && lastUpdated) { 
+        lastUpdatedSpan.textContent = `Last updated: ${lastUpdated}`; 
+    }
   });
-  chrome.storage.local.get({ connections: [] }, data => {
-      renderConnectionsList(data.connections);
+  
+  chrome.storage.local.get({ [STORAGE_KEYS.CONNECTIONS]: [] }, data => {
+      renderConnectionsList(data[STORAGE_KEYS.CONNECTIONS]);
   });
 
   // Event Listeners
   chrome.storage.onChanged.addListener((changes) => {
-    if (changes.foundEntries) {
-      const newEntries = changes.foundEntries.newValue || [];
+    if (changes[STORAGE_KEYS.FOUND_ENTRIES]) {
+      const newEntries = changes[STORAGE_KEYS.FOUND_ENTRIES].newValue || [];
       renderFoundList(newEntries);
       const badge = document.querySelector('.tab-button[data-tab="found"] .count');
       if (badge) badge.textContent = newEntries.length;
     }
-    if (changes.loopStatus || changes.extensionState) updateLoopCounter();
-    if (changes.masterEntries) displayMasterList();
-    if (changes.connections) renderConnectionsList(changes.connections.newValue);
+    if (changes[STORAGE_KEYS.LOOP_STATUS] || changes[STORAGE_KEYS.EXTENSION_STATE]) {
+      updateLoopCounter();
+    }
+    if (changes[STORAGE_KEYS.MASTER_ENTRIES]) {
+      displayMasterList();
+    }
+    if (changes[STORAGE_KEYS.CONNECTIONS]) {
+      renderConnectionsList(changes[STORAGE_KEYS.CONNECTIONS].newValue);
+    }
+    if (changes[STORAGE_KEYS.CHECKER_MODE]) {
+      updateModeDisplay(changes[STORAGE_KEYS.CHECKER_MODE].newValue);
+    }
   });
 
   document.querySelector('.tabs').addEventListener('click', (event) => {
@@ -542,7 +580,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('clearBtn').addEventListener('click', () => {
-    chrome.storage.local.set({ foundEntries: [] }, () => location.reload());
+    chrome.storage.local.set({ [STORAGE_KEYS.FOUND_ENTRIES]: [] }, () => location.reload());
   });
 
   document.getElementById('updateMasterBtn').addEventListener('click', (event) => {
@@ -599,11 +637,11 @@ document.addEventListener('DOMContentLoaded', () => {
     startBtnText.textContent = isStarted ? 'Stop' : 'Start';
     updateLoopCounter();
   }
-  chrome.storage.local.get({ extensionState: 'off' }, data => updateButtonState(data.extensionState));
+  chrome.storage.local.get({ [STORAGE_KEYS.EXTENSION_STATE]: 'off' }, data => updateButtonState(data[STORAGE_KEYS.EXTENSION_STATE]));
   startBtn.addEventListener('click', (event) => {
     createRipple(event);
     const newState = !isStarted ? 'on' : 'off';
-    chrome.storage.local.set({ extensionState: newState });
+    chrome.storage.local.set({ [STORAGE_KEYS.EXTENSION_STATE]: newState });
     updateButtonState(newState);
   });
 
@@ -616,9 +654,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
       if (connectionToDelete) {
-          const { connections: currentConnections = [] } = await chrome.storage.local.get('connections');
+          const { [STORAGE_KEYS.CONNECTIONS]: currentConnections = [] } = await chrome.storage.local.get(STORAGE_KEYS.CONNECTIONS);
           const updatedConnections = currentConnections.filter(c => c.id !== connectionToDelete);
-          await chrome.storage.local.set({ connections: updatedConnections });
+          await chrome.storage.local.set({ [STORAGE_KEYS.CONNECTIONS]: updatedConnections });
           connectionToDelete = null;
           closeModal('delete-confirm-modal');
       }
@@ -674,7 +712,7 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const form = e.target;
       const editingId = form.dataset.editingId;
-      const { connections = [] } = await chrome.storage.local.get('connections');
+      const { [STORAGE_KEYS.CONNECTIONS]: connections = [] } = await chrome.storage.local.get(STORAGE_KEYS.CONNECTIONS);
       
       const connectionData = {
           type: 'power-automate',
@@ -684,10 +722,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (editingId) {
           const updatedConnections = connections.map(conn => conn.id === editingId ? { ...conn, ...connectionData } : conn);
-          await chrome.storage.local.set({ connections: updatedConnections });
+          await chrome.storage.local.set({ [STORAGE_KEYS.CONNECTIONS]: updatedConnections });
       } else {
           const newConnection = { id: `conn_${Date.now()}`, ...connectionData };
-          await chrome.storage.local.set({ connections: [...connections, newConnection] });
+          await chrome.storage.local.set({ [STORAGE_KEYS.CONNECTIONS]: [...connections, newConnection] });
       }
       closeModal('connections-modal');
   });
@@ -696,7 +734,7 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const form = e.target;
       const editingId = form.dataset.editingId;
-      const { connections = [] } = await chrome.storage.local.get('connections');
+      const { [STORAGE_KEYS.CONNECTIONS]: connections = [] } = await chrome.storage.local.get(STORAGE_KEYS.CONNECTIONS);
       
       const connectionData = {
           type: 'pusher',
@@ -710,10 +748,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (editingId) {
           const updatedConnections = connections.map(conn => conn.id === editingId ? { ...conn, ...connectionData } : conn);
-          await chrome.storage.local.set({ connections: updatedConnections });
+          await chrome.storage.local.set({ [STORAGE_KEYS.CONNECTIONS]: updatedConnections });
       } else {
           const newConnection = { id: `conn_${Date.now()}`, ...connectionData };
-          await chrome.storage.local.set({ connections: [...connections, newConnection] });
+          await chrome.storage.local.set({ [STORAGE_KEYS.CONNECTIONS]: [...connections, newConnection] });
       }
       closeModal('connections-modal');
   });
@@ -786,17 +824,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       statusEl.textContent = 'Testing...';
       statusEl.className = 'test-status';
-      const testPayload = {
-        name: "Jane Doe (PA Test)",
-        grade: "95%",
-        timestamp: new Date().toISOString(),
-        url: "#test-url",
-        test: true
-      };
       chrome.runtime.sendMessage({
           type: 'test-connection-pa',
-          connection: { type: 'power-automate', url },
-          payload: testPayload
+          connection: { type: 'power-automate', url }
       });
   });
 
@@ -855,17 +885,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // --- Settings Inputs ---
-  const settingsInputs = {
-    concurrentTabsInput: { key: 'concurrentTabs', default: 3, type: 'number' },
-    looperDaysOutFilterInput: { key: 'looperDaysOutFilter', default: 'all', type: 'text' },
-    customKeywordInput: { key: 'customKeyword', default: '', type: 'text' },
+  const settingsToSync = {
+    concurrentTabsInput: { key: STORAGE_KEYS.CONCURRENT_TABS, type: 'number' },
+    looperDaysOutFilterInput: { key: STORAGE_KEYS.LOOPER_DAYS_OUT_FILTER, type: 'text' },
+    customKeywordInput: { key: STORAGE_KEYS.CUSTOM_KEYWORD, type: 'text' },
   };
-  Object.entries(settingsInputs).forEach(([id, { key, default: def, type }]) => {
+
+  chrome.storage.local.get(DEFAULT_SETTINGS, (settings) => {
+    Object.entries(settingsToSync).forEach(([id, { key, type }]) => {
+      const input = document.getElementById(id);
+      if (input) {
+        input.value = (key === STORAGE_KEYS.LOOPER_DAYS_OUT_FILTER && settings[key] === 'all') ? '' : settings[key];
+      }
+    });
+
+    const colorPicker = document.getElementById('colorPicker');
+    colorPicker.value = settings[STORAGE_KEYS.HIGHLIGHT_COLOR];
+
+    const debugToggle = document.getElementById('debugToggle');
+    debugToggle.checked = settings[STORAGE_KEYS.DEBUG_MODE];
+    document.body.classList.toggle('debug-mode', settings[STORAGE_KEYS.DEBUG_MODE]);
+
+    const checkerModeToggle = document.getElementById('checkerModeToggle');
+    const currentMode = settings[STORAGE_KEYS.CHECKER_MODE];
+    checkerModeToggle.checked = (currentMode === CHECKER_MODES.MISSING);
+    updateModeDisplay(currentMode);
+  });
+
+  Object.entries(settingsToSync).forEach(([id, { key, type }]) => {
     const input = document.getElementById(id);
     if (!input) return;
-    chrome.storage.local.get({ [key]: def }, data => {
-        input.value = (key === 'looperDaysOutFilter' && data[key] === 'all') ? '' : data[key];
-    });
     input.addEventListener('change', (event) => {
         let value = event.target.value.trim();
         if (type === 'number') {
@@ -875,36 +924,34 @@ document.addEventListener('DOMContentLoaded', () => {
             event.target.value = value;
         }
         chrome.storage.local.set({ [key]: value });
-        if (key === 'customKeyword') updateKeywordDisplay();
+        if (key === STORAGE_KEYS.CUSTOM_KEYWORD) updateKeywordDisplay();
     });
   });
   
-  const colorPicker = document.getElementById('colorPicker');
-  chrome.storage.local.get({ highlightColor: '#ffff00' }, data => { colorPicker.value = data.highlightColor; });
-  colorPicker.addEventListener('input', (event) => { chrome.storage.local.set({ highlightColor: event.target.value }); });
-
-  const debugToggle = document.getElementById('debugToggle');
-  function applyDebugModeStyles(enabled) { document.body.classList.toggle('debug-mode', enabled); }
-  chrome.storage.local.get({ debugMode: false }, data => {
-    debugToggle.checked = data.debugMode;
-    applyDebugModeStyles(data.debugMode);
+  document.getElementById('colorPicker').addEventListener('input', (event) => {
+    chrome.storage.local.set({ [STORAGE_KEYS.HIGHLIGHT_COLOR]: event.target.value });
   });
-  debugToggle.addEventListener('change', (event) => {
+
+  document.getElementById('debugToggle').addEventListener('change', (event) => {
     const isEnabled = event.target.checked;
-    chrome.storage.local.set({ debugMode: isEnabled });
-    applyDebugModeStyles(isEnabled);
+    chrome.storage.local.set({ [STORAGE_KEYS.DEBUG_MODE]: isEnabled });
+    document.body.classList.toggle('debug-mode', isEnabled);
+  });
+  
+  document.getElementById('checkerModeToggle').addEventListener('change', (event) => {
+    const newMode = event.target.checked ? CHECKER_MODES.MISSING : CHECKER_MODES.SUBMISSION;
+    chrome.storage.local.set({ [STORAGE_KEYS.CHECKER_MODE]: newMode });
   });
 
   document.getElementById('sharepointBtn').addEventListener('click', (event) => {
       createRipple(event);
-      chrome.tabs.create({ url: "https://edukgroup3_sharepoint.com/sites/SM-StudentServices/SitePages/CollabHome.aspx" });
+      chrome.tabs.create({ url: SHAREPOINT_URL });
   });
 
   // --- Tooltip & Context Menu Logic ---
   document.addEventListener('mouseover', event => {
       const icon = event.target.closest('.info-icon');
       if (icon) {
-          const tooltip = icon.querySelector('::after');
           const rect = icon.getBoundingClientRect();
           const containerRect = document.querySelector('.container').getBoundingClientRect();
           

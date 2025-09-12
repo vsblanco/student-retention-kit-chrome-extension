@@ -1,20 +1,32 @@
-// background.js
+/*
+* Timestamp: 2025-09-12 17:01 PM
+* Version: 8.0
+*/
 import { startLoop, stopLoop, processNextInQueue, addToFoundUrlCache } from './looper.js';
+import { STORAGE_KEYS } from '../constants.js';
 
 // --- CORE LISTENERS ---
 
 chrome.action.onClicked.addListener((tab) => chrome.sidePanel.open({ windowId: tab.windowId }));
+
 chrome.commands.onCommand.addListener((command, tab) => {
   if (command === '_execute_action') chrome.sidePanel.open({ windowId: tab.windowId });
 });
+
 chrome.runtime.onStartup.addListener(() => {
   updateBadge();
-  chrome.storage.local.get('extensionState', data => handleStateChange(data.extensionState));
+  chrome.storage.local.get(STORAGE_KEYS.EXTENSION_STATE, data => handleStateChange(data[STORAGE_KEYS.EXTENSION_STATE]));
 });
+
 chrome.storage.onChanged.addListener((changes) => {
-  if (changes.extensionState) handleStateChange(changes.extensionState.newValue);
-  if (changes.extensionState || changes.foundEntries) updateBadge();
+  if (changes[STORAGE_KEYS.EXTENSION_STATE]) {
+    handleStateChange(changes[STORAGE_KEYS.EXTENSION_STATE].newValue);
+  }
+  if (changes[STORAGE_KEYS.EXTENSION_STATE] || changes[STORAGE_KEYS.FOUND_ENTRIES]) {
+    updateBadge();
+  }
 });
+
 chrome.runtime.onMessage.addListener(async (msg, sender) => {
   if (msg.action === 'inspectionResult') {
     if (msg.found && msg.entry) {
@@ -37,14 +49,16 @@ chrome.runtime.onMessage.addListener(async (msg, sender) => {
 // --- CONNECTION HANDLING ---
 
 async function sendConnectionPings(payload) {
-    const { connections = [], debugMode = false } = await chrome.storage.local.get(['connections', 'debugMode']);
+    const { 
+        [STORAGE_KEYS.CONNECTIONS]: connections = [], 
+        [STORAGE_KEYS.DEBUG_MODE]: debugMode = false 
+    } = await chrome.storage.local.get([STORAGE_KEYS.CONNECTIONS, STORAGE_KEYS.DEBUG_MODE]);
+
     const bodyPayload = { ...payload };
     
-    // If the payload itself isn't marked as a debug send, check the global setting.
     if (!bodyPayload.debug && debugMode) {
       bodyPayload.debug = true;
     }
-
 
     for (const conn of connections) {
         if (conn.type === 'power-automate') {
@@ -85,7 +99,7 @@ async function triggerPowerAutomate(connection, payload) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
-    if (!resp.ok && resp.status !== 202) { // 202 is "Accepted" for flows
+    if (!resp.ok && resp.status !== 202) {
       throw new Error(`HTTP ${resp.status}`);
     }
     console.log("Power Automate flow triggered successfully. Status:", resp.status);
@@ -99,9 +113,10 @@ async function triggerPowerAutomate(connection, payload) {
 // --- STATE & DATA MANAGEMENT ---
 
 function updateBadge() {
-  chrome.storage.local.get(['extensionState', 'foundEntries'], (data) => {
-    const isExtensionOn = data.extensionState === 'on';
-    const foundCount = data.foundEntries?.length || 0;
+  chrome.storage.local.get([STORAGE_KEYS.EXTENSION_STATE, STORAGE_KEYS.FOUND_ENTRIES], (data) => {
+    const isExtensionOn = data[STORAGE_KEYS.EXTENSION_STATE] === 'on';
+    const foundCount = data[STORAGE_KEYS.FOUND_ENTRIES]?.length || 0;
+    
     if (isExtensionOn) {
       chrome.action.setBadgeBackgroundColor({ color: '#0052cc' });
       chrome.action.setBadgeText({ text: foundCount > 0 ? foundCount.toString() : 'ON' });
@@ -117,13 +132,13 @@ function handleStateChange(state) {
 }
 
 async function addStudentToFoundList(entry) {
-    const { foundEntries = [] } = await chrome.storage.local.get('foundEntries');
+    const { [STORAGE_KEYS.FOUND_ENTRIES]: foundEntries = [] } = await chrome.storage.local.get(STORAGE_KEYS.FOUND_ENTRIES);
     const map = new Map(foundEntries.map(e => [e.url, e]));
     map.set(entry.url, entry);
     addToFoundUrlCache(entry.url);
-    await chrome.storage.local.set({ foundEntries: Array.from(map.values()) });
+    await chrome.storage.local.set({ [STORAGE_KEYS.FOUND_ENTRIES]: Array.from(map.values()) });
 }
 
 // Initial setup on load
 updateBadge();
-chrome.storage.local.get('extensionState', data => handleStateChange(data.extensionState));
+chrome.storage.local.get(STORAGE_KEYS.EXTENSION_STATE, data => handleStateChange(data[STORAGE_KEYS.EXTENSION_STATE]));
