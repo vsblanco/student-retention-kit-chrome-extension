@@ -1,33 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LDA Submission Checker</title>
-  <!-- Google Font -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet"/>
   <style>
     :root {
       --bg-color: #f5f7fa;
       --card-bg: #ffffff;
       --primary-color: #0052cc;
       --text-color: #333333;
-      --accent-color: #0052cc;
+      --accent-color: #0052cc; 
+      --light-accent-color: #4c9aff;
       --border-radius: 8px;
       --shadow: 0 2px 6px rgba(0,0,0,0.1);
       --spacing: 12px;
+      --badge-size: 20px;
     }
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Roboto', sans-serif;
       background: var(--bg-color);
       color: var(--text-color);
       padding: var(--spacing);
-      min-width: 260px;
+      min-width: 390px;
     }
     .container {
       background: var(--card-bg);
@@ -35,24 +32,107 @@
       box-shadow: var(--shadow);
       padding: calc(var(--spacing) * 1.5);
     }
-    h2 {
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing);
+    }
+    .title-area {
+      flex-grow: 1;
+    }
+    .header h2 {
       font-size: 1.4em;
       font-weight: 700;
       color: var(--primary-color);
+      margin-bottom: 2px;
+    }
+    #version-display {
+      font-size: 0.75em;
+      color: #888;
+      font-weight: 400;
+    }
+    #startBtn {
+      position: relative; 
+      overflow: hidden; 
+      display: flex;
+      align-items: center;
+      background: var(--accent-color); 
+      color: #fff;
+      border: none;
+      border-radius: var(--border-radius);
+      padding: 6px 12px;
+      font-size: 0.95em;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      flex-shrink: 0;
+    }
+    #startBtn img { width: 16px; height: 16px; margin-right: 6px; }
+    #startBtn:hover { opacity: 0.85; }
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background-color: rgba(255, 255, 255, 0.7);
+      transform: scale(0);
+      animation: ripple 600ms linear;
+    }
+    @keyframes ripple {
+      to {
+        transform: scale(4);
+        opacity: 0;
+      }
+    }
+    .keyword-section {
       margin-bottom: var(--spacing);
-      text-align: center;
-    }
-    .section {
-      margin-top: var(--spacing);
-    }
-    #keyword {
-      font-weight: 500;
       font-size: 1.1em;
+      font-weight: 500;
       color: var(--accent-color);
     }
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #ccc;
+      margin-bottom: var(--spacing);
+    }
+    .tab-button {
+      position: relative;
+      flex: 1;
+      padding: 8px 0;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      font-weight: 500;
+      color: var(--text-color);
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .tab-button.active {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+    .badge {
+      position: absolute;
+      top: 4px;
+      right: 16px;
+      width: var(--badge-size);
+      height: var(--badge-size);
+      background: url('assets/pictures/notification.png') no-repeat center/contain;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .badge .count {
+      font-size: 0.75em;
+      color: white;
+      font-weight: bold;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .section { margin-top: var(--spacing); }
     .found-list {
       list-style: none;
       margin-top: var(--spacing);
+      max-height: 220px;
+      overflow-y: auto;
     }
     .found-list li {
       padding: 6px 10px;
@@ -60,8 +140,17 @@
       border: 1px solid #e0e0e0;
       border-radius: var(--border-radius);
       margin-bottom: 6px;
+      display: flex; /* Use flexbox for better alignment */
+      align-items: center;
     }
-    #clearBtn {
+    /* --- New Style for Phone Number --- */
+    .phone-number {
+        color: #666;
+        font-size: 0.9em;
+        margin-left: 8px;
+    }
+    #clearBtn,
+    #updateMasterBtn {
       display: block;
       width: 100%;
       margin-top: var(--spacing);
@@ -75,25 +164,61 @@
       cursor: pointer;
       transition: background 0.3s;
     }
-    #clearBtn:hover {
-      background: #003d99;
+    #clearBtn:hover,
+    #updateMasterBtn:hover { background: #003d99; }
+    #newItemInput {
+      display: block;
+      width: 100%;
+      margin-top: var(--spacing);
+      padding: 8px;
+      font-size: 0.95em;
+      border: 1px solid #ccc;
+      border-radius: var(--border-radius);
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>LDA Submission Checker</h2>
-    <div class="section">
-      <p>Looking for: <span id="keyword">…</span></p>
+    <div class="header">
+      <div class="title-area">
+        <h2>LDA Submission Checker</h2>
+        <p id="version-display"></p>
+      </div>
+      <button id="startBtn">
+        <img src="assets/pictures/powericon.png" alt="Start"/>
+        <span id="startBtnText">Start</span>
+      </button>
     </div>
-    <div class="section">
-      <h3>Found</h3>
-      <ul id="foundList" class="found-list">
-        <li>…</li>
-      </ul>
+    <div class="keyword-section">
+      Looking for: <span id="keyword">…</span>
     </div>
-    <button id="clearBtn">Clear All</button>
+    <div class="tabs">
+      <button class="tab-button active" data-tab="found">
+        Found
+        <span class="badge"><span class="count">0</span></span>
+      </button>
+      <button class="tab-button" data-tab="master">
+        Master List
+        <span class="badge"><span class="count">0</span></span>
+      </button>
+    </div>
+    <div id="found" class="tab-content active">
+      <div class="section">
+        <h3>Found</h3>
+        <ul id="foundList" class="found-list"></ul>
+      </div>
+      <button id="clearBtn">Clear All</button>
+    </div>
+    <div id="master" class="tab-content">
+      <button id="updateMasterBtn">Update Master List</button>
+      <input type="text" id="newItemInput" placeholder="Search Name or Phone..." />
+      <div class="section">
+        <h3>Master List</h3>
+        <ul id="masterList" class="found-list"></ul>
+      </div>
+    </div>
   </div>
   <script src="popup.js"></script>
+  <script src="popupSearch.js"></script>
 </body>
 </html>

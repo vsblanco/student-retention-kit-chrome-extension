@@ -1,111 +1,96 @@
 // content.js
 
-// 1) Compute today's date string, e.g. "Jun 10 at"
-const now = new Date();
-const opts = { month: 'short', day: 'numeric' };
-const todayStr = now.toLocaleDateString('en-US', opts).replace(',', '') + ' at';
+(async function() {
+  // First, get the current on/off state of the extension from storage.
+  const { extensionState = 'off' } = await chrome.storage.local.get('extensionState');
+  const isLooperRun = new URLSearchParams(window.location.search).has('looper');
+  let keywordFound = false;
 
-let keywordFound = false;
-let playedSound = false;
-let focusedTab = false;
+  const now = new Date();
+  const opts = { month: 'short', day: 'numeric' };
+  const todayStr = now.toLocaleDateString('en-US', opts).replace(',', '') + ' at';
 
-// Play sound once
-function playSoundOnce() {
-  if (playedSound) return;
-  playedSound = true;
-  const audio = new Audio(chrome.runtime.getURL('assets/audio/song.mp3'));
-  audio.preload = 'auto';
-  audio.play().catch(() => {
-    document.addEventListener('click', () => audio.play().catch(() => {}), { once: true, capture: true });
-  });
-}
-
-// Focus once
-function focusTabOnce() {
-  if (focusedTab) return;
-  focusedTab = true;
-  chrome.runtime.sendMessage({ action: 'focusTab' });
-}
-
-// Get first student name
-function getFirstStudentName() {
-  const re = /Grades for\s*([\w ,'-]+)/g;
-  let match;
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
-  while (walker.nextNode()) {
-    const txt = walker.currentNode.nodeValue;
-    while ((match = re.exec(txt))) return match[1].trim();
+  function getFirstStudentName() {
+    const re = /Grades for\s*([\w ,'-]+)/g;
+    let match;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+    while (walker.nextNode()) {
+      const txt = walker.currentNode.nodeValue;
+      while ((match = re.exec(txt))) return match[1].trim();
+    }
+    return 'Unknown student';
   }
-  return 'Unknown student';
-}
 
-// Highlight and conditionally trigger
-function highlightInTextNode(node, keyword) {
-  const cell = node.parentElement?.closest('td.submitted');
-  if (!cell) return;
+  function highlightAndNotify(node) {
+    if (keywordFound) return;
 
-  const orig = node.nodeValue;
-  const norm = orig.replace(/\u00A0/g, ' ');
-  const idx = norm.indexOf(keyword);
-  if (idx < 0) return;
+    const cell = node.parentElement?.closest('td.submitted');
+    if (!cell) return;
 
-  // Always highlight
-  const before = orig.slice(0, idx);
-  const matchStr = orig.slice(idx, idx + keyword.length);
-  const after = orig.slice(idx + keyword.length);
-  const parent = node.parentNode;
-  parent.insertBefore(document.createTextNode(before), node);
-  const span = document.createElement('span');
-  span.textContent = matchStr;
-  span.style.backgroundColor = 'yellow';
-  span.style.fontWeight = 'bold';
-  span.style.fontSize = '1.1em';
-  parent.insertBefore(span, node);
-  parent.insertBefore(document.createTextNode(after), node);
-  parent.removeChild(node);
+    const idx = node.nodeValue.indexOf(todayStr);
+    if (idx < 0) return;
 
-  // Only once: play, focus, then check storage & send
-  if (!keywordFound) {
     keywordFound = true;
-    playSoundOnce();
-    focusTabOnce();
 
-    const studentName = getFirstStudentName();
-    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    const url = window.location.href;
+    // --- Highlighting Logic ---
+    const parent = node.parentNode;
+    const span = document.createElement('span');
+    span.textContent = node.nodeValue.slice(idx, idx + todayStr.length);
+    span.style.backgroundColor = 'yellow';
+    span.style.fontWeight = 'bold';
+    span.style.fontSize = '1.1em';
+    
+    parent.insertBefore(document.createTextNode(node.nodeValue.slice(0, idx)), node);
+    parent.insertBefore(span, node);
+    parent.insertBefore(document.createTextNode(node.nodeValue.slice(idx + todayStr.length)), node);
+    parent.removeChild(node);
 
-    chrome.storage.local.get({ foundEntries: [] }, data => {
-      const exists = data.foundEntries.some(e => e.name === studentName);
-      if (!exists) {
-        // trigger and store
-        chrome.runtime.sendMessage({
-          action: 'runFlow',
-          payload: { name: studentName, url, timestamp: now.toISOString() }
-        });
-        chrome.runtime.sendMessage({
-          action: 'addNames',
-          entries: [{ name: studentName, time: timeStr, url }]
-        });
-      }
-    });
-  }
+    // --- THIS IS THE NEW PART ---
+    // If the extension is off (i.e., not in loop mode), scroll to the keyword.
+    if (extensionState === 'off') {
+        console.log("Extension is off. Scrolling to keyword.");
+        span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 
-  // Continue in same cell
-  const nextNode = parent.childNodes[Array.from(parent.childNodes).indexOf(span) + 1];
-  if (nextNode) highlightInTextNode(nextNode, keyword);
-}
+    // --- Notification Logic (only for looper) ---
+    if (isLooperRun) {
+      console.log('Keyword FOUND on a looper-opened tab.');
+      const studentName = getFirstStudentName();
+      const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const url = window.location.href;
 
-// Walk and apply
-function walkAndHighlight(root, keyword) {
-  const SKIP = ['SCRIPT','STYLE','NOSCRIPT','IFRAME'];
-  for (const node of Array.from(root.childNodes)) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      highlightInTextNode(node, keyword);
-    } else if (node.nodeType === Node.ELEMENT_NODE && !SKIP.includes(node.tagName)) {
-      walkAndHighlight(node, keyword);
+      chrome.runtime.sendMessage({ action: 'addNames', entries: [{ name: studentName, time: timeStr, url }] });
+      chrome.runtime.sendMessage({ action: 'runFlow', payload: { name: studentName, url, timestamp: now.toISOString() } });
+      chrome.runtime.sendMessage({ action: 'focusTab' });
     }
   }
-}
 
-// Initial run
-walkAndHighlight(document.body, todayStr);
+  function walkTheDOM(root) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let node;
+    function processChunk() {
+        let count = 0;
+        while ((node = walker.nextNode()) && count < 200) {
+            highlightAndNotify(node);
+            count++;
+        }
+        if (node) {
+            setTimeout(processChunk, 50);
+        } else {
+            finishCheck();
+        }
+    }
+    processChunk();
+  }
+
+  function finishCheck() {
+    if (isLooperRun) {
+        chrome.runtime.sendMessage({ action: 'inspectionResult', found: keywordFound });
+    }
+  }
+
+  // --- Main Execution ---
+  console.log("Content script loaded. Current state:", extensionState);
+  walkTheDOM(document.body);
+
+})();

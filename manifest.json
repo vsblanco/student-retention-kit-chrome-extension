@@ -1,33 +1,30 @@
 {
   "manifest_version": 3,
   "name": "Date-Keyword Highlighter",
-  "version": "1.7",
-  "description": "Highlights today’s date keyword, collects student names, and triggers a Power Automate flow",
+  "version": "2.1",
+  "description": "Highlights today’s date, triggers flows, manages Found & Master lists",
   "permissions": [
     "storage",
-    "activeTab",
-    "tabs"
+    "tabs",
+    "alarms"
   ],
   "host_permissions": [
-    "https://prod-12.westus.logic.azure.com/*"
+    "https://prod-12.westus.logic.azure.com/*",
+    "https://prod-10.westus.logic.azure.com/*"
   ],
   "background": {
-    "service_worker": "background.js"
-  },
-  "action": {
-    "default_popup": "popup.html",
-    "default_icon": "icon.png"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "matches": ["https://nuc.instructure.com/courses/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
     }
   ],
-  "web_accessible_resources": [
-    {
-      "resources": ["assets/audio/song.mp3"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  }
 }
