@@ -35,14 +35,14 @@ Create your list using the following structure:
 [  
   {  
     "StudentName": "Doe, Jane",  
-    "GradeBook": "\[https://nuc.instructure.com/courses/123/grades/456\](https://nuc.instructure.com/courses/123/grades/456)",  
+    "GradeBook": "https://example-gradebook.com/courses/123/grades/456",  
     "DaysOut": 5,  
     "LDA": "2023-10-27T10:00:00Z",  
     "Grade": "95%"  
   },  
   {  
     "StudentName": "Smith, John",  
-    "GradeBook": "\[https://nuc.instructure.com/courses/123/grades/457\](https://nuc.instructure.com/courses/123/grades/457)",  
+    "GradeBook": "https://example-gradebook.com/courses/123/grades/456",  
     "DaysOut": 12,  
     "LDA": "2023-10-16T11:30:00Z",  
     "Grade": "88%"  
@@ -83,7 +83,7 @@ In the Settings tab, you can create connections to send data to external service
 {  
   "name": "Doe, Jane",  
   "time": "4:24 PM",  
-  "url": "\[https://nuc.instructure.com/courses/123/grades/456\](https://nuc.instructure.com/courses/123/grades/456)",  
+  "url": "https://example-gradebook.com/courses/123/grades/456",  
   "timestamp": "2025-09-12T20:24:00.000Z",  
   "grade": 95.0  
 }
