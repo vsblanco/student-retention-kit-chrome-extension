@@ -1,8 +1,10 @@
+/*
+* Timestamp: 2025-09-15 08:31 AM
+* Version: 8.0
+*/
 /* --- Liquid Glass Theme (Light) --- */
 
-/* To see the full glass effect, a background is needed on the body */
 html {
-    /* Apply custom scrollbar to the main window */
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05);
 }
@@ -10,10 +12,10 @@ html {
 body {
     font-family: 'Roboto', sans-serif;
     margin: 0;
-    background: url('assets/pictures/background.png') no-repeat center center fixed;
+    background: url('../assets/pictures/background.png') no-repeat center center fixed;
     background-size: cover;
     color: #333333;
-    min-width: 300px; /* Adjusted for side panel flexibility */
+    min-width: 300px; 
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -31,7 +33,7 @@ body {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    overflow-y: hidden; /* Prevent double scrollbars */
+    overflow-y: hidden;
 }
 
 .header {
@@ -104,6 +106,11 @@ body {
     background: #374151;
 }
 
+.mode-display-section {
+    margin-bottom: 12px;
+    font-size: 1em;
+    color: #374151;
+}
 
 .keyword-section {
     margin-bottom: 12px;
@@ -133,7 +140,6 @@ body {
     white-space: nowrap;
 }
 
-/* Correctly center text on tab buttons that DO NOT have a badge */
 .tab-button:not(:has(.badge)) {
     padding-right: 12px;
 }
@@ -203,7 +209,7 @@ h3 {
     display: flex;
     align-items: center;
     transition: background-color 0.3s, border-color 0.3s;
-    position: relative; /* Needed for menu positioning */
+    position: relative;
 }
 
 .found-list li:hover, .connections-list li:hover {
@@ -336,11 +342,10 @@ h3 {
 
 .settings-scroll-container {
     overflow-y: auto;
-    padding-right: 10px; /* Space for scrollbar */
+    padding-right: 10px;
     flex-grow: 1;
 }
 
-/* NEW: Allow menu to overflow when active */
 .settings-scroll-container.overflow-visible {
     overflow: visible;
 }
@@ -421,7 +426,6 @@ input:checked + .slider:before { transform: translateX(20px); }
     opacity: 1;
 }
 
-/* Scrollbar Styles */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -539,7 +543,6 @@ input:checked + .slider:before { transform: translateX(20px); }
     color: #dc2626;
 }
 
-/* Modal Styles */
 .modal-overlay {
     position: fixed;
     z-index: 2000;
@@ -583,7 +586,6 @@ input:checked + .slider:before { transform: translateX(20px); }
     color: #333;
 }
 
-/* --- Connection Form Header --- */
 .connection-form-header {
     display: flex;
     align-items: center;
@@ -614,8 +616,6 @@ input:checked + .slider:before { transform: translateX(20px); }
     transition: color 0.2s;
 }
 
-
-/* --- UPDATED STYLES for Connection Choice Modal --- */
 #connection-chooser h3 {
     text-align: center;
     font-size: 1.2em;
@@ -647,7 +647,7 @@ input:checked + .slider:before { transform: translateX(20px); }
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     position: relative;
-    overflow: hidden; /* Important for the glow effect */
+    overflow: hidden;
 }
 
 .connection-choice-btn:hover {
@@ -694,11 +694,10 @@ input:checked + .slider:before { transform: translateX(20px); }
     word-wrap: break-word;
 }
 
-/* --- Custom Context Menu for Found List --- */
 #list-context-menu {
     display: none;
     position: fixed;
-    z-index: 2100; /* Higher than modal overlay */
+    z-index: 2100;
     background: rgba(255, 255, 255, 0.85);
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
@@ -739,8 +738,6 @@ input:checked + .slider:before { transform: translateX(20px); }
     margin: 4px 8px;
 }
 
-
-/* --- Delete & Export Modal --- */
 .modal-actions {
     display: flex;
     justify-content: flex-end;
@@ -786,8 +783,6 @@ input:checked + .slider:before { transform: translateX(20px); }
     transform: translateY(-1px);
 }
 
-
-/* --- Modern Connection Form Styles --- */
 .connection-form .setting-item {
     flex-direction: column;
     align-items: flex-start;
@@ -898,9 +893,8 @@ input:checked + .slider:before { transform: translateX(20px); }
     color: #dc2626;
 }
 
-/* --- Tooltip Styles --- */
 .info-icon {
-    display: inline-flex; /* Use flex to center content */
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 14px;
@@ -909,13 +903,13 @@ input:checked + .slider:before { transform: translateX(20px); }
     color: white;
     border-radius: 50%;
     font-style: italic;
-    font-family: serif; /* Use a font with a distinct 'i' */
+    font-family: serif;
     font-weight: bold;
     font-size: 11px;
-    line-height: 14px; /* Explicitly set line-height */
+    line-height: 14px;
     cursor: help;
     position: relative;
-    -webkit-user-select: none; /* Prevent text selection */
+    -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
@@ -932,7 +926,7 @@ input:checked + .slider:before { transform: translateX(20px); }
     color: white;
     padding: 8px 12px;
     border-radius: 6px;
-    font-family: 'Roboto', sans-serif; /* Reset font for tooltip */
+    font-family: 'Roboto', sans-serif;
     font-style: normal;
     font-weight: 400;
     font-size: 0.85em;
@@ -951,7 +945,6 @@ input:checked + .slider:before { transform: translateX(20px); }
     visibility: visible;
 }
 
-/* New classes for dynamic tooltip positioning */
 .info-icon.tooltip-left::after {
     left: auto;
     right: 0;
@@ -964,7 +957,6 @@ input:checked + .slider:before { transform: translateX(20px); }
     transform: translateX(0);
 }
 
-/* --- Prefixed Input Styles --- */
 .prefixed-input-wrapper {
     display: flex;
     align-items: center;
@@ -987,7 +979,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 .input-prefix {
     font-weight: bold;
     color: #4a5568;
-    user-select: none; /* Can't select the prefix text */
+    user-select: none;
 }
 
 .prefixed-input-wrapper input {
@@ -996,10 +988,9 @@ input:checked + .slider:before { transform: translateX(20px); }
     box-shadow: none !important;
     flex-grow: 1;
     width: auto;
-    padding-left: 4px; /* Small space between prefix and input */
+    padding-left: 4px;
 }
 
-/* --- Rainbow Glow Animation with BLUR --- */
 @property --angle {
   syntax: '<angle>';
   initial-value: 0deg;
@@ -1030,12 +1021,9 @@ input:checked + .slider:before { transform: translateX(20px); }
     );
     filter: blur(45px);
     animation: rainbow-border-spin 3s linear infinite;
-    border-radius: inherit; /* Match the parent's radius */
+    border-radius: inherit;
 }
 
-
-
-/* --- NEW: Auto-fill Highlight Animation --- */
 @keyframes auto-fill-highlight {
     0% { background-color: rgba(255, 255, 0, 0.4); }
     100% { background-color: rgba(255, 255, 255, 0.6); }
@@ -1049,5 +1037,91 @@ input:checked + .slider:before { transform: translateX(20px); }
     border-top: none;
     padding-top: 0;
     margin-bottom: 15px;
+}
+
+#debug-console-content {
+    position: absolute;
+    left: 20px;
+    top: 50px;
+    width: 90%;
+    max-width: 500px;
+    height: 350px;
+    resize: both;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    z-index: 3000;
+}
+
+#debug-console-header {
+    padding: 8px 12px;
+    background-color: #374151;
+    border-bottom: 1px solid #4b5563;
+    cursor: move;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 1rem 1rem 0 0;
+    color: #f3f4f6;
+}
+
+#debug-console-header span {
+    font-weight: 500;
+}
+
+#closeConsoleBtn {
+    position: static;
+    font-size: 24px;
+    padding: 0 5px;
+    line-height: 1;
+    color: #d1d5db;
+    background: none;
+    border: none;
+}
+#closeConsoleBtn:hover {
+    color: white;
+}
+
+
+#debug-console-log-area {
+    flex-grow: 1;
+    background-color: #111827;
+    color: #d1d5db;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.85em;
+    padding: 10px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+#debug-console-log-area .log-entry {
+    padding: 3px 5px;
+    border-bottom: 1px solid #1f2937;
+    line-height: 1.4;
+}
+
+#debug-console-log-area .log-entry.warn {
+    background-color: #4a3a1a;
+    color: #fefcbf;
+    border-left: 3px solid #fbbF24;
+}
+#debug-console-log-area .log-entry.error {
+    background-color: #4c1d1d;
+    color: #fecaca;
+    border-left: 3px solid #f87171;
+}
+
+#debug-console .modal-actions {
+    margin-top: 0;
+    padding: 8px;
+    border-top: 1px solid #4b5563;
+    background-color: #374151;
+    border-radius: 0 0 1rem 1rem;
+}
+
+#debug-console .modal-actions button {
+    padding: 5px 15px;
 }
 

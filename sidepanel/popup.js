@@ -1,10 +1,11 @@
 /*
-* Timestamp: 2025-09-12 17:24 PM
+* Timestamp: 2025-09-15 08:41 AM
 * Version: 8.0
 */
 import { STORAGE_KEYS, DEFAULT_SETTINGS, ADVANCED_FILTER_REGEX, SHAREPOINT_URL, CHECKER_MODES } from '../constants.js';
 
 // --- RENDER FUNCTIONS ---
+// ... (render functions are unchanged) ...
 export function renderFoundList(entries) {
   const list = document.getElementById('foundList');
   list.innerHTML = '';
@@ -188,7 +189,7 @@ function renderConnectionsList(connections = []) {
 
 
 // --- DATA & STATE MANAGEMENT ---
-
+// ... (data management functions are unchanged) ...
 let activeSort = { criterion: 'none', direction: 'none' };
 let connectionToDelete = null;
 let connectionToExport = null;
@@ -316,7 +317,7 @@ async function updateMasterFromClipboard() {
 }
 
 // --- UI HELPER FUNCTIONS ---
-
+// ... (ui helpers are unchanged) ...
 function getDaysOutStyle(daysout) {
     if (daysout == null) return {};
     if (daysout >= 10) return { backgroundColor: 'hsl(0, 85%, 55%)', color: 'white', fontWeight: 'bold' };
@@ -367,6 +368,7 @@ function updateExportView() {
 }
 
 // --- MODAL FUNCTIONS ---
+// ... (modal functions are unchanged) ...
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) modal.style.display = 'flex';
@@ -418,6 +420,7 @@ function openEditConnectionModal(connection, index) {
 }
 
 // --- Clipboard Auto-Detect ---
+// ... (clipboard functions are unchanged) ...
 async function checkClipboardForConnection() {
     try {
         const text = await navigator.clipboard.readText();
@@ -483,8 +486,130 @@ function autoFillForm(type) {
 // --- DOMContentLoaded: MAIN SETUP ---
 
 document.addEventListener('DOMContentLoaded', () => {
+
+  // --- FLOATING DEBUG CONSOLE LOGIC ---
+  function setupDebugConsole() {
+      // ... (console setup is unchanged) ...
+      const consoleEl = document.getElementById('debug-console');
+      const consoleContent = document.getElementById('debug-console-content');
+      const consoleHeader = document.getElementById('debug-console-header');
+      const logArea = document.getElementById('debug-console-log-area');
+      const toggleBtn = document.getElementById('toggleConsoleBtn');
+      const closeBtn = document.getElementById('closeConsoleBtn');
+      const clearBtn = document.getElementById('clearConsoleBtn');
+
+      toggleBtn.addEventListener('click', () => {
+          const isHidden = consoleEl.style.display === 'none';
+          consoleEl.style.display = isHidden ? 'block' : 'none';
+          toggleBtn.textContent = isHidden ? 'Hide Console' : 'Show Console';
+      });
+
+      closeBtn.addEventListener('click', () => {
+          consoleEl.style.display = 'none';
+          toggleBtn.textContent = 'Show Console';
+      });
+
+      clearBtn.addEventListener('click', () => {
+          logArea.innerHTML = '';
+      });
+
+      makeDraggable(consoleContent, consoleHeader);
+      overrideConsole(logArea);
+      console.log("Debug console initialized.");
+  }
+
+  function makeDraggable(element, handle) {
+      // ... (draggable logic is unchanged) ...
+      let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+      handle.onmousedown = dragMouseDown;
+
+      function dragMouseDown(e) {
+          e.preventDefault();
+          pos3 = e.clientX;
+          pos4 = e.clientY;
+          document.onmouseup = closeDragElement;
+          document.onmousemove = elementDrag;
+      }
+
+      function elementDrag(e) {
+          e.preventDefault();
+          pos1 = pos3 - e.clientX;
+          pos2 = pos4 - e.clientY;
+          pos3 = e.clientX;
+          pos4 = e.clientY;
+          element.style.top = (element.offsetTop - pos2) + "px";
+          element.style.left = (element.offsetLeft - pos1) + "px";
+      }
+
+      function closeDragElement() {
+          document.onmouseup = null;
+          document.onmousemove = null;
+      }
+  }
+
+  function overrideConsole(logArea) {
+      // ... (console override logic is unchanged) ...
+      const originalLog = console.log;
+      const originalWarn = console.warn;
+      const originalError = console.error;
+
+      const createLogEntry = (args, type) => {
+          const entry = document.createElement('div');
+          entry.className = `log-entry ${type}`;
+          
+          const message = Array.from(args).map(arg => {
+              if (typeof arg === 'object' && arg !== null) {
+                  try {
+                      // Special formatting for known log types
+                      if (arg.name && arg.time) { // Submission Found
+                          return `Student: ${arg.name}, Time: ${arg.time}`;
+                      }
+                      if (arg.studentName && arg.count) { // Missing Found
+                          const assignments = arg.assignments.map(a => `  - ${a.title} (Due: ${a.dueDate})`).join('\n');
+                          return `Student: ${arg.studentName}\n${assignments}`;
+                      }
+                      return JSON.stringify(arg, null, 2);
+                  } catch (e) {
+                      return '[Unserializable Object]';
+                  }
+              }
+              return String(arg);
+          }).join(' ');
+
+          entry.textContent = message;
+          logArea.appendChild(entry);
+          logArea.scrollTop = logArea.scrollHeight; // Auto-scroll
+      };
+
+      console.log = function(...args) {
+          originalLog.apply(console, args);
+          createLogEntry(args, 'log');
+      };
+      console.warn = function(...args) {
+          originalWarn.apply(console, args);
+          createLogEntry(args, 'warn');
+      };
+      console.error = function(...args) {
+          originalError.apply(console, args);
+          createLogEntry(args, 'error');
+      };
+  }
+
+  // --- *** NEW: Message Listener for Logs *** ---
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (msg.type === 'logToPanel') {
+      if (msg.level === 'warn') {
+        console.warn(msg.payload);
+      } else {
+        console.log(msg.payload);
+      }
+    }
+  });
+
   const manifest = chrome.runtime.getManifest();
   document.getElementById('version-display').textContent = `Version ${manifest.version}`;
+  // ... (the rest of the DOMContentLoaded is unchanged) ...
   const keywordDisplay = document.getElementById('keyword');
   const loopCounterDisplay = document.getElementById('loop-counter');
   let contextMenuEntry = null;
@@ -521,7 +646,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const keywordSection = document.querySelector('.keyword-section');
     if (mode === CHECKER_MODES.MISSING) {
         display.textContent = 'Missing Assignments';
-        keywordSection.style.display = 'none'; // Hide keyword when not needed
+        keywordSection.style.display = 'none';
     } else {
         display.textContent = 'Submission Check';
         keywordSection.style.display = 'block';
@@ -552,7 +677,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderConnectionsList(data[STORAGE_KEYS.CONNECTIONS]);
   });
 
-  // Event Listeners
+  // Event Listeners for Storage
   chrome.storage.onChanged.addListener((changes) => {
     if (changes[STORAGE_KEYS.FOUND_ENTRIES]) {
       const newEntries = changes[STORAGE_KEYS.FOUND_ENTRIES].newValue || [];
@@ -611,7 +736,7 @@ document.addEventListener('DOMContentLoaded', () => {
           activeSort.criterion = 'daysout';
           activeSort.direction = 'desc';
       } else {
-          activeSort.direction = activeSort.direction === 'desc' ? 'asc' : 'desc';
+          activeSort.direction = activeSort.direction === 'desc' ? 'asc' : 'asc';
       }
       updateSortButtons();
       displayMasterList();
@@ -1013,5 +1138,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Final setup
   switchTab('found');
+  setupDebugConsole();
 });
 
