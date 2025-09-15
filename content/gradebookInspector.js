@@ -1,5 +1,5 @@
 // [2025-09-15]
-// Version: 9.1
+// Version: 10.3
 // Note: This content script cannot use ES6 modules, so constants are redefined here.
 
 const CHECKER_MODES = {
@@ -137,44 +137,133 @@ const STORAGE_KEYS = {
 
   // --- MISSING ASSIGNMENT CHECK LOGIC ---
   function runMissingCheck() {
-    console.log("Content script loaded in MISSING mode.");
     const studentName = getFirstStudentName();
     const assignmentRows = document.querySelectorAll('tr.student_assignment');
     const missingAssignments = [];
+    const allAssignmentsDetails = [];
     const now = new Date();
+    const currentYear = now.getFullYear();
+
+    console.log(`Scanning ${assignmentRows.length} total assignments for ${studentName}...`);
 
     assignmentRows.forEach(row => {
-      const dueCell = row.querySelector('td.due');
-      const submittedCell = row.querySelector('td.submitted');
-      const titleLink = row.querySelector('th.title a');
+        const titleLink = row.querySelector('th.title a');
+        const dueCell = row.querySelector('td.due');
+        const submittedCell = row.querySelector('td.submitted');
+        const scoreCell = row.querySelector('td.assignment_score');
 
-      if (!dueCell || !submittedCell || !titleLink) return;
+        const submittedContent = submittedCell ? submittedCell.textContent.trim() : '';
+        const dueDateStr = dueCell ? dueCell.textContent.trim() : '';
+        const hasSubmission = submittedContent !== '';
 
-      const dueDateStr = dueCell.textContent.trim();
-      const submittedContent = submittedCell.textContent.trim();
-      const title = titleLink.textContent.trim();
-      const link = titleLink.href;
-
-      if (submittedContent === '') {
-        try {
-          // Attempt to parse dates like "Aug 26 by 11:59pm"
-          const dueDate = new Date(dueDateStr.replace(/by/g, ''));
-          if (!isNaN(dueDate) && dueDate < now) {
-            missingAssignments.push({ title, link, dueDate: dueDate.toLocaleDateString() });
-          }
-        } catch (e) {
-            // This will gracefully ignore dates that JS can't parse, like "Varies"
+        let isPastDue = false;
+        let dueDate = null;
+        let formattedDueDate = 'N/A';
+        
+        if (dueDateStr && dueDateStr !== 'N/A') {
+            try {
+                // Manually parse the date string for robustness
+                const monthMap = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+                const regex = /(\w{3})\s+(\d+)\s*(?:by\s*)?(\d{1,2}:\d{2}(am|pm))?/i;
+                const match = dueDateStr.match(regex);
+                
+                if (match) {
+                    const month = monthMap[match[1]];
+                    const day = parseInt(match[2], 10);
+                    let hours = 23;
+                    let minutes = 59;
+                    
+                    if (match[3]) { // If time is present
+                        let time = match[3];
+                        let isPM = time.toLowerCase().includes('pm');
+                        time = time.replace(/am|pm/i, '').trim();
+                        let parts = time.split(':');
+                        hours = parseInt(parts[0], 10);
+                        minutes = parseInt(parts[1], 10);
+                        if (isPM && hours < 12) {
+                            hours += 12;
+                        }
+                        if (!isPM && hours === 12) {
+                            hours = 0;
+                        }
+                    }
+                    
+                    dueDate = new Date(currentYear, month, day, hours, minutes);
+                    
+                    if (!isNaN(dueDate)) {
+                        isPastDue = dueDate < now;
+                        formattedDueDate = dueDate.toLocaleString();
+                    } else {
+                        formattedDueDate = 'Invalid Date';
+                    }
+                } else {
+                   formattedDueDate = 'Could not parse date string';
+                }
+            } catch(e) { 
+                formattedDueDate = 'Parsing Error';
+            }
         }
-      }
+
+        let score = 'N/A';
+        let earnedScore = NaN;
+        if (scoreCell) {
+            const scoreText = scoreCell.textContent.trim().replace(/\s+/g, ' ');
+            if (scoreText.includes('/')) {
+                const parts = scoreText.split('/');
+                const earned = parseFloat(parts[0].trim());
+                const possible = parseFloat(parts[1].trim());
+
+                if (!isNaN(earned)) {
+                    earnedScore = earned;
+                }
+
+                if (!isNaN(earned) && !isNaN(possible) && possible > 0) {
+                    const percentage = (earned / possible) * 100;
+                    score = `${percentage.toFixed(0)}% (${earned} / ${possible})`;
+                } else {
+                    score = scoreText; // Could not parse numbers, show original
+                }
+            } else {
+                score = scoreText; // No slash found
+            }
+        }
+        
+        const hasZeroScore = earnedScore === 0;
+
+        const assignmentDetail = {
+            name: titleLink ? titleLink.textContent.trim() : 'N/A',
+            link: titleLink ? titleLink.href : '#',
+            dueDate: dueDateStr,
+            formattedDueDate: formattedDueDate,
+            submitted: submittedContent,
+            score: score,
+            hasSubmission: hasSubmission,
+            isPastDue: isPastDue,
+            hasZeroScore: hasZeroScore
+        };
+        allAssignmentsDetails.push(assignmentDetail);
+
+        if (!hasSubmission && isPastDue && hasZeroScore) {
+            missingAssignments.push({ 
+                title: assignmentDetail.name, 
+                link: assignmentDetail.link, 
+                dueDate: dueDate.toLocaleDateString() 
+            });
+        }
     });
 
+    console.log('All assignment details:', allAssignmentsDetails);
+
     if (missingAssignments.length > 0) {
+      console.log('Missing assignments found:', missingAssignments);
       const payload = {
           studentName: studentName,
           count: missingAssignments.length,
           assignments: missingAssignments
       };
       chrome.runtime.sendMessage({ action: MESSAGE_TYPES.FOUND_MISSING_ASSIGNMENTS, payload });
+    } else {
+      console.log(`No past-due missing assignments found for ${studentName}.`);
     }
 
     if (isLooperRun) {
@@ -190,3 +279,4 @@ const STORAGE_KEYS = {
   }
 
 })();
+
