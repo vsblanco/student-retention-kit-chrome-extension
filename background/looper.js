@@ -1,8 +1,6 @@
-/*
-* Timestamp: 2025-09-15 10:50 AM
-* Version: 9.0
-*/
-import { STORAGE_KEYS, CHECKER_MODES, ADVANCED_FILTER_REGEX, DEFAULT_SETTINGS } from '../constants.js';
+// [2025-09-15]
+// Version: 9.1
+import { STORAGE_KEYS, CHECKER_MODES, ADVANCED_FILTER_REGEX, DEFAULT_SETTINGS, EXTENSION_STATES, MESSAGE_TYPES } from '../constants.js';
 
 let currentLoopIndex = 0;
 let isLooping = false;
@@ -104,9 +102,6 @@ export function stopLoop() {
     chrome.tabs.remove(tabId).catch(e => {});
   }
   activeTabs.clear();
-  // MODIFIED: State change is now handled by the background script's listeners
-  // to ensure consistency.
-  // chrome.storage.local.set({ [STORAGE_KEYS.EXTENSION_STATE]: 'off' });
 }
 
 export function processNextInQueue(finishedTabId = null) {
@@ -119,8 +114,8 @@ export function processNextInQueue(finishedTabId = null) {
   if (currentLoopIndex >= masterListCache.length && activeTabs.size === 0) {
     if (currentCheckerMode === CHECKER_MODES.MISSING) {
         console.log('Completed single run for Missing Assignments check.');
-        chrome.runtime.sendMessage({ action: 'missingCheckCompleted' });
-        chrome.storage.local.set({ [STORAGE_KEYS.EXTENSION_STATE]: "off" });
+        chrome.runtime.sendMessage({ action: MESSAGE_TYPES.MISSING_CHECK_COMPLETED });
+        chrome.storage.local.set({ [STORAGE_KEYS.EXTENSION_STATE]: EXTENSION_STATES.OFF });
         return;
     } else { // SUBMISSION mode
         console.log('Looped through entire list. Starting over.');
@@ -166,4 +161,3 @@ async function openTab(entry) {
         setTimeout(() => processNextInQueue(), 100);
     }
 }
-

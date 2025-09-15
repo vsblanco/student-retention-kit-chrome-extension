@@ -1,11 +1,16 @@
-// offscreen.js
+// [2025-09-15]
+// Version: 9.1
+// This script runs in the offscreen document. It cannot use ES6 modules to import
+// the constants file, so message types are defined locally.
+const MESSAGE_TYPES = {
+  TRIGGER_PUSHER: 'trigger-pusher'
+};
 
-// This script runs in the offscreen document, which has access to the 'window' object.
 chrome.runtime.onMessage.addListener(handleMessages);
 
 function handleMessages(message) {
   // We only expect 'trigger-pusher' messages from the service worker.
-  if (message.target === 'offscreen' && message.type === 'trigger-pusher') {
+  if (message.target === 'offscreen' && message.type === MESSAGE_TYPES.TRIGGER_PUSHER) {
     triggerPusher(message.connection, message.payload);
   }
 }

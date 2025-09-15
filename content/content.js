@@ -1,9 +1,23 @@
-/*
-* Timestamp: 2025-09-15 08:46 AM
-* Version: 8.0
-*/
+// [2025-09-15]
+// Version: 9.1
+// Note: This content script cannot use ES6 modules, so constants are redefined here.
 
-// Constants cannot be imported in content scripts, so they are defined here directly.
+const CHECKER_MODES = {
+    SUBMISSION: 'submission',
+    MISSING: 'missing'
+};
+
+const EXTENSION_STATES = {
+    ON: 'on',
+    OFF: 'off'
+};
+
+const MESSAGE_TYPES = {
+    INSPECTION_RESULT: 'inspectionResult',
+    FOUND_SUBMISSION: 'foundSubmission',
+    FOUND_MISSING_ASSIGNMENTS: 'foundMissingAssignments'
+};
+
 const STORAGE_KEYS = {
     CONCURRENT_TABS: 'concurrentTabs',
     LOOPER_DAYS_OUT_FILTER: 'looperDaysOutFilter',
@@ -19,15 +33,10 @@ const STORAGE_KEYS = {
     LAST_UPDATED: 'lastUpdated'
 };
 
-const CHECKER_MODES = {
-    SUBMISSION: 'submission',
-    MISSING: 'missing'
-};
-
 
 (async function() {
   const settings = await chrome.storage.local.get(Object.values(STORAGE_KEYS));
-  const extensionState = settings[STORAGE_KEYS.EXTENSION_STATE] || 'off';
+  const extensionState = settings[STORAGE_KEYS.EXTENSION_STATE] || EXTENSION_STATES.OFF;
   const highlightColor = settings[STORAGE_KEYS.HIGHLIGHT_COLOR] || '#ffff00';
   const customKeyword = settings[STORAGE_KEYS.CUSTOM_KEYWORD] || '';
   const checkerMode = settings[STORAGE_KEYS.CHECKER_MODE] || CHECKER_MODES.SUBMISSION;
@@ -83,7 +92,7 @@ const CHECKER_MODES = {
       parent.insertBefore(document.createTextNode(node.nodeValue.slice(idx + todayStr.length)), node);
       parent.removeChild(node);
 
-      if (extensionState === 'off') {
+      if (extensionState === EXTENSION_STATES.OFF) {
           span.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
 
@@ -100,7 +109,7 @@ const CHECKER_MODES = {
             url: cleanUrl,
             timestamp: new Date().toISOString()
         };
-        chrome.runtime.sendMessage({ action: 'foundSubmission', payload: foundEntry });
+        chrome.runtime.sendMessage({ action: MESSAGE_TYPES.FOUND_SUBMISSION, payload: foundEntry });
       }
     }
 
@@ -117,9 +126,9 @@ const CHECKER_MODES = {
       if (!isLooperRun) return;
 
       if (keywordFound) {
-        chrome.runtime.sendMessage({ action: 'inspectionResult', found: true, entry: foundEntry });
+        chrome.runtime.sendMessage({ action: MESSAGE_TYPES.INSPECTION_RESULT, found: true, entry: foundEntry });
       } else {
-        chrome.runtime.sendMessage({ action: 'inspectionResult', found: false, entry: null });
+        chrome.runtime.sendMessage({ action: MESSAGE_TYPES.INSPECTION_RESULT, found: false, entry: null });
       }
     }
 
@@ -165,11 +174,11 @@ const CHECKER_MODES = {
           count: missingAssignments.length,
           assignments: missingAssignments
       };
-      chrome.runtime.sendMessage({ action: 'foundMissingAssignments', payload });
+      chrome.runtime.sendMessage({ action: MESSAGE_TYPES.FOUND_MISSING_ASSIGNMENTS, payload });
     }
 
     if (isLooperRun) {
-      chrome.runtime.sendMessage({ action: 'inspectionResult', found: false, entry: null });
+      chrome.runtime.sendMessage({ action: MESSAGE_TYPES.INSPECTION_RESULT, found: false, entry: null });
     }
   }
 
@@ -181,4 +190,3 @@ const CHECKER_MODES = {
   }
 
 })();
-

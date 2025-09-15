@@ -1,8 +1,6 @@
-/*
-* Timestamp: 2025-09-15 10:57 AM
-* Version: 9.0
-*/
-import { STORAGE_KEYS, DEFAULT_SETTINGS, ADVANCED_FILTER_REGEX, SHAREPOINT_URL, CHECKER_MODES } from '../constants.js';
+// [2025-09-15]
+// Version: 9.1
+import { STORAGE_KEYS, DEFAULT_SETTINGS, ADVANCED_FILTER_REGEX, SHAREPOINT_URL, CHECKER_MODES, EXTENSION_STATES, MESSAGE_TYPES, CONNECTION_TYPES } from '../constants.js';
 
 // --- RENDER FUNCTIONS ---
 // ... (render functions are unchanged) ...
@@ -114,11 +112,11 @@ function renderConnectionsList(connections = []) {
         const detailSpan = document.createElement('span');
         detailSpan.className = 'connection-detail';
 
-        if (conn.type === 'power-automate') {
+        if (conn.type === CONNECTION_TYPES.POWER_AUTOMATE) {
             icon.src = '../assets/pictures/power-automate-icon.png';
             typeSpan.textContent = 'Power Automate';
             detailSpan.textContent = conn.name;
-        } else if (conn.type === 'pusher') {
+        } else if (conn.type === CONNECTION_TYPES.PUSHER) {
             icon.src = '../assets/pictures/pusher-icon.png';
             typeSpan.textContent = 'Pusher';
             detailSpan.textContent = conn.name;
@@ -358,7 +356,7 @@ function updateExportView() {
         if (exportableConn.secret) {
             exportableConn.secret = '';
         }
-        if (exportableConn.type === 'power-automate' && exportableConn.url) {
+        if (exportableConn.type === CONNECTION_TYPES.POWER_AUTOMATE && exportableConn.url) {
             exportableConn.url = ''; 
         }
     }
@@ -404,10 +402,10 @@ function openEditConnectionModal(connection, index) {
   form.style.display = 'block';
   form.dataset.editingId = connection.id;
 
-  if (connection.type === 'power-automate') {
+  if (connection.type === CONNECTION_TYPES.POWER_AUTOMATE) {
       document.getElementById('pa-name').value = connection.name;
       document.getElementById('pa-url').value = connection.url;
-  } else if (connection.type === 'pusher') {
+  } else if (connection.type === CONNECTION_TYPES.PUSHER) {
       document.getElementById('pusher-name').value = connection.name;
       document.getElementById('pusher-key').value = connection.key;
       document.getElementById('pusher-cluster').value = connection.cluster;
@@ -429,9 +427,9 @@ async function checkClipboardForConnection() {
         paBtn.classList.remove('clipboard-match');
         pusherBtn.classList.remove('clipboard-match');
 
-        if (data.type === 'power-automate' && data.name && data.url) {
+        if (data.type === CONNECTION_TYPES.POWER_AUTOMATE && data.name && data.url) {
             paBtn.classList.add('clipboard-match');
-        } else if (data.type === 'pusher' && data.name && data.key && data.cluster && data.secret && data.channel && data.event) {
+        } else if (data.type === CONNECTION_TYPES.PUSHER && data.name && data.key && data.cluster && data.secret && data.channel && data.event) {
             pusherBtn.classList.add('clipboard-match');
         }
     } catch (e) {
@@ -450,11 +448,11 @@ function autoFillForm(type) {
         
         const inputsToHighlight = [];
 
-        if (type === 'power-automate') {
+        if (type === CONNECTION_TYPES.POWER_AUTOMATE) {
             document.getElementById('pa-name').value = data.name;
             document.getElementById('pa-url').value = data.url;
             inputsToHighlight.push(document.getElementById('pa-name'), document.getElementById('pa-url'));
-        } else if (type === 'pusher') {
+        } else if (type === CONNECTION_TYPES.PUSHER) {
             document.getElementById('pusher-name').value = data.name;
             document.getElementById('pusher-key').value = data.key;
             document.getElementById('pusher-cluster').value = data.cluster;
@@ -614,7 +612,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   chrome.runtime.onMessage.addListener((msg) => {
-    if (msg.type === 'logToPanel') {
+    if (msg.type === MESSAGE_TYPES.LOG_TO_PANEL) {
         const { level, payload } = msg;
 
         if (payload.type === 'SUBMISSION' && currentSessionId) {
@@ -648,7 +646,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const extensionState = data[STORAGE_KEYS.EXTENSION_STATE];
         const counterText = (loopStatus && loopStatus.total > 0) ? `${loopStatus.current} / ${loopStatus.total}` : '';
 
-        if (extensionState === 'on' && counterText) {
+        if (extensionState === EXTENSION_STATES.ON && counterText) {
             loopCounterDisplay.textContent = counterText;
             loopCounterDisplay.style.display = 'block';
 
@@ -725,7 +723,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (changes[STORAGE_KEYS.LOOP_STATUS]) {
       updateLoopCounter();
     }
-    // MODIFIED: Handle EXTENSION_STATE changes to update the UI
     if (changes[STORAGE_KEYS.EXTENSION_STATE]) {
       updateButtonState(changes[STORAGE_KEYS.EXTENSION_STATE].newValue);
     }
@@ -798,7 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const startBtnText = document.getElementById('startBtnText');
   let isStarted;
   function updateButtonState(state) {
-    isStarted = (state === 'on');
+    isStarted = (state === EXTENSION_STATES.ON);
     startBtn.classList.toggle('active', isStarted);
     startBtnText.textContent = isStarted ? 'Stop' : 'Start';
     if (!isStarted) {
@@ -806,12 +803,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updateLoopCounter();
   }
-  chrome.storage.local.get({ [STORAGE_KEYS.EXTENSION_STATE]: 'off' }, data => updateButtonState(data[STORAGE_KEYS.EXTENSION_STATE]));
+  chrome.storage.local.get({ [STORAGE_KEYS.EXTENSION_STATE]: EXTENSION_STATES.OFF }, data => updateButtonState(data[STORAGE_KEYS.EXTENSION_STATE]));
   startBtn.addEventListener('click', (event) => {
     createRipple(event);
-    const newState = !isStarted ? 'on' : 'off';
+    const newState = !isStarted ? EXTENSION_STATES.ON : EXTENSION_STATES.OFF;
     
-    if (newState === 'on') {
+    if (newState === EXTENSION_STATES.ON) {
         currentSessionId = `run_${Date.now()}`;
         chrome.storage.local.get({ [STORAGE_KEYS.CHECKER_MODE]: CHECKER_MODES.SUBMISSION }, (settings) => {
             const mode = settings[STORAGE_KEYS.CHECKER_MODE];
@@ -823,7 +820,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     chrome.storage.local.set({ [STORAGE_KEYS.EXTENSION_STATE]: newState });
-    // The button state will now be updated by the storage listener, ensuring consistency.
   });
 
   // --- Modals Logic ---
@@ -896,7 +892,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const { [STORAGE_KEYS.CONNECTIONS]: connections = [] } = await chrome.storage.local.get(STORAGE_KEYS.CONNECTIONS);
       
       const connectionData = {
-          type: 'power-automate',
+          type: CONNECTION_TYPES.POWER_AUTOMATE,
           name: document.getElementById('pa-name').value,
           url: document.getElementById('pa-url').value
       };
@@ -918,7 +914,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const { [STORAGE_KEYS.CONNECTIONS]: connections = [] } = await chrome.storage.local.get(STORAGE_KEYS.CONNECTIONS);
       
       const connectionData = {
-          type: 'pusher',
+          type: CONNECTION_TYPES.PUSHER,
           name: document.getElementById('pusher-name').value,
           key: document.getElementById('pusher-key').value,
           cluster: document.getElementById('pusher-cluster').value,
@@ -1010,8 +1006,8 @@ document.addEventListener('DOMContentLoaded', () => {
       statusEl.textContent = 'Testing...';
       statusEl.className = 'test-status';
       chrome.runtime.sendMessage({
-          type: 'test-connection-pa',
-          connection: { type: 'power-automate', url }
+          type: MESSAGE_TYPES.TEST_CONNECTION_PA,
+          connection: { type: CONNECTION_TYPES.POWER_AUTOMATE, url }
       });
   });
 
@@ -1053,7 +1049,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   chrome.runtime.onMessage.addListener(async (message) => {
-      if (message.type === 'connection-test-result' && message.connectionType === 'power-automate') {
+      if (message.type === MESSAGE_TYPES.CONNECTION_TEST_RESULT && message.connectionType === CONNECTION_TYPES.POWER_AUTOMATE) {
           const { success, error } = message;
           const statusEl = document.getElementById('pa-test-status');
           if (success) {
@@ -1063,7 +1059,7 @@ document.addEventListener('DOMContentLoaded', () => {
               statusEl.textContent = `Failed: ${error}`;
               statusEl.className = 'test-status error';
           }
-      } else if (message.type === 'trigger-pusher') {
+      } else if (message.type === MESSAGE_TYPES.TRIGGER_PUSHER) {
           await triggerPusher(message.connection, message.payload);
       }
   });
@@ -1207,7 +1203,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('debugSendBtn').addEventListener('click', () => {
     if (contextMenuEntry) {
         const payload = { ...contextMenuEntry, debug: true };
-        chrome.runtime.sendMessage({ type: 'send-debug-payload', payload });
+        chrome.runtime.sendMessage({ type: MESSAGE_TYPES.SEND_DEBUG_PAYLOAD, payload });
         console.log("Sent debug payload:", payload);
     }
     document.getElementById('list-context-menu').style.display = 'none';
@@ -1217,4 +1213,3 @@ document.addEventListener('DOMContentLoaded', () => {
   switchTab('found');
   setupDebugConsole();
 });
-

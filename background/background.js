@@ -1,9 +1,7 @@
-/*
-* Timestamp: 2025-09-15 10:50 AM
-* Version: 9.0
-*/
+// [2025-09-15]
+// Version: 9.1
 import { startLoop, stopLoop, processNextInQueue, addToFoundUrlCache } from './looper.js';
-import { STORAGE_KEYS, CHECKER_MODES } from '../constants.js';
+import { STORAGE_KEYS, CHECKER_MODES, MESSAGE_TYPES, EXTENSION_STATES, CONNECTION_TYPES } from '../constants.js';
 
 let logBuffer = [];
 const MAX_LOG_BUFFER_SIZE = 100;
@@ -38,7 +36,7 @@ chrome.storage.onChanged.addListener((changes) => {
   }
 });
 chrome.runtime.onMessage.addListener(async (msg, sender) => {
-  if (msg.action === 'inspectionResult') {
+  if (msg.action === MESSAGE_TYPES.INSPECTION_RESULT) {
     if (msg.found && msg.entry) {
       await addStudentToFoundList(msg.entry);
       sendConnectionPings(msg.entry);
@@ -47,13 +45,13 @@ chrome.runtime.onMessage.addListener(async (msg, sender) => {
       chrome.tabs.remove(sender.tab.id).catch(e => console.error(`Error removing tab ${sender.tab.id}:`, e));
       processNextInQueue(sender.tab.id);
     }
-  } else if (msg.action === 'foundSubmission') {
+  } else if (msg.action === MESSAGE_TYPES.FOUND_SUBMISSION) {
       const logPayload = { type: 'SUBMISSION', ...msg.payload };
       addToLogBuffer('log', logPayload);
-      chrome.runtime.sendMessage({ type: 'logToPanel', level: 'log', payload: logPayload });
-  } else if (msg.action === 'foundMissingAssignments') {
+      chrome.runtime.sendMessage({ type: MESSAGE_TYPES.LOG_TO_PANEL, level: 'log', payload: logPayload });
+  } else if (msg.action === MESSAGE_TYPES.FOUND_MISSING_ASSIGNMENTS) {
       missingAssignmentsCollector.push(msg.payload);
-  } else if (msg.action === 'missingCheckCompleted') {
+  } else if (msg.action === MESSAGE_TYPES.MISSING_CHECK_COMPLETED) {
       if (missingAssignmentsCollector.length > 0) {
           const summaryPayload = {
               type: 'MISSING_SUMMARY',
@@ -61,22 +59,21 @@ chrome.runtime.onMessage.addListener(async (msg, sender) => {
               details: missingAssignmentsCollector
           };
           addToLogBuffer('warn', summaryPayload);
-          chrome.runtime.sendMessage({ type: 'logToPanel', level: 'warn', payload: summaryPayload });
+          chrome.runtime.sendMessage({ type: MESSAGE_TYPES.LOG_TO_PANEL, level: 'warn', payload: summaryPayload });
       } else {
           const summaryPayload = { type: 'MISSING_SUMMARY', message: "SUCCESS: No missing assignments found for any students in the list." };
           addToLogBuffer('log', summaryPayload);
-          chrome.runtime.sendMessage({ type: 'logToPanel', level: 'log', payload: summaryPayload });
+          chrome.runtime.sendMessage({ type: MESSAGE_TYPES.LOG_TO_PANEL, level: 'log', payload: summaryPayload });
       }
-      // MODIFIED: Centralize state change here
-      chrome.storage.local.set({ [STORAGE_KEYS.EXTENSION_STATE]: 'off' });
-  } else if (msg.type === 'requestingStoredLogs') {
+      chrome.storage.local.set({ [STORAGE_KEYS.EXTENSION_STATE]: EXTENSION_STATES.OFF });
+  } else if (msg.type === MESSAGE_TYPES.REQUEST_STORED_LOGS) {
       if (logBuffer.length > 0) {
-          chrome.runtime.sendMessage({ type: 'storedLogs', payload: logBuffer });
+          chrome.runtime.sendMessage({ type: MESSAGE_TYPES.STORED_LOGS, payload: logBuffer });
           logBuffer = [];
       }
-  } else if (msg.type === 'test-connection-pa') {
+  } else if (msg.type === MESSAGE_TYPES.TEST_CONNECTION_PA) {
     handlePaConnectionTest(msg.connection);
-  } else if (msg.type === 'send-debug-payload') {
+  } else if (msg.type === MESSAGE_TYPES.SEND_DEBUG_PAYLOAD) {
     if (msg.payload) {
       sendConnectionPings(msg.payload);
     }
@@ -93,11 +90,11 @@ async function sendConnectionPings(payload) {
       bodyPayload.debug = true;
     }
     for (const conn of connections) {
-        if (conn.type === 'power-automate') {
+        if (conn.type === CONNECTION_TYPES.POWER_AUTOMATE) {
             triggerPowerAutomate(conn, bodyPayload);
-        } else if (conn.type === 'pusher') {
+        } else if (conn.type === CONNECTION_TYPES.PUSHER) {
             chrome.runtime.sendMessage({
-                type: 'trigger-pusher',
+                type: MESSAGE_TYPES.TRIGGER_PUSHER,
                 target: 'offscreen',
                 connection: conn,
                 payload: bodyPayload
@@ -108,7 +105,7 @@ async function sendConnectionPings(payload) {
 async function handlePaConnectionTest(connection) {
     const testPayload = { name: 'Test Submission', url: '#', grade: '100', timestamp: new Date().toISOString(), test: true };
     const result = await triggerPowerAutomate(connection, testPayload);
-    chrome.runtime.sendMessage({ type: 'connection-test-result', connectionType: 'power-automate', success: result.success, error: result.error || 'Check service worker console for details.' });
+    chrome.runtime.sendMessage({ type: MESSAGE_TYPES.CONNECTION_TEST_RESULT, connectionType: CONNECTION_TYPES.POWER_AUTOMATE, success: result.success, error: result.error || 'Check service worker console for details.' });
 }
 async function triggerPowerAutomate(connection, payload) {
   try {
@@ -125,7 +122,7 @@ async function triggerPowerAutomate(connection, payload) {
 // --- STATE & DATA MANAGEMENT ---
 function updateBadge() {
   chrome.storage.local.get([STORAGE_KEYS.EXTENSION_STATE, STORAGE_KEYS.FOUND_ENTRIES], (data) => {
-    const isExtensionOn = data[STORAGE_KEYS.EXTENSION_STATE] === 'on';
+    const isExtensionOn = data[STORAGE_KEYS.EXTENSION_STATE] === EXTENSION_STATES.ON;
     const foundCount = data[STORAGE_KEYS.FOUND_ENTRIES]?.length || 0;
     if (isExtensionOn) {
       chrome.action.setBadgeBackgroundColor({ color: '#0052cc' });
@@ -137,7 +134,7 @@ function updateBadge() {
 }
 
 async function handleStateChange(newState, oldState) {
-    if (newState === 'on') {
+    if (newState === EXTENSION_STATES.ON) {
         const settings = await chrome.storage.local.get(STORAGE_KEYS.CHECKER_MODE);
         const currentMode = settings[STORAGE_KEYS.CHECKER_MODE] || CHECKER_MODES.SUBMISSION;
         
@@ -148,7 +145,7 @@ async function handleStateChange(newState, oldState) {
             console.log("Starting Missing Assignments check. Collector has been cleared.");
         }
         startLoop();
-    } else if (newState === 'off' && oldState === 'on') {
+    } else if (newState === EXTENSION_STATES.OFF && oldState === EXTENSION_STATES.ON) {
         stopLoop();
     }
 }
