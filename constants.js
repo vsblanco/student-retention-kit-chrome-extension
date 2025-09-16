@@ -1,5 +1,5 @@
-// [2025-09-15]
-// Version: 9.2
+// [2025-09-16]
+// Version: 9.4
 /*
 * Timestamp: 2025-09-12 17:17 PM
 * Version: 8.0
@@ -91,3 +91,4 @@ export const ADVANCED_FILTER_REGEX = /^\s*([><]=?|=)\s*(\d+)\s*$/;
  * SharePoint URL for the "SharePoint" button in the settings tab.
  */
 export const SHAREPOINT_URL = "https://edukgroup3_sharepoint.com/sites/SM-StudentServices/SitePages/CollabHome.aspx";
+

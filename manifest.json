@@ -45,6 +45,7 @@
   "web_accessible_resources": [
     {
       "resources": [
+        "README.md",
         "sidepanel/liquid-glass.css",
         "assets/pictures/powericon.png",
         "assets/pictures/power-automate-icon.png",

@@ -1,5 +1,5 @@
 // [2025-09-16]
-// Version: 10.7
+// Version: 11.0
 import { STORAGE_KEYS, DEFAULT_SETTINGS, ADVANCED_FILTER_REGEX, SHAREPOINT_URL, CHECKER_MODES, EXTENSION_STATES, MESSAGE_TYPES, CONNECTION_TYPES } from '../constants.js';
 
 let lastActiveTab = 'found'; // Variable to store the last active tab before 'about'
@@ -241,6 +241,61 @@ function renderFormattedReport(reportData) {
         details.appendChild(assignmentsList);
         container.appendChild(details);
     });
+}
+
+
+// --- ABOUT TAB & README FUNCTIONS ---
+function simpleMarkdownToHtml(markdown) {
+    let html = markdown
+        // Remove backslashes escaping punctuation
+        .replace(/\\([^\w\s])/g, '$1')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // Handle unordered lists
+    html = html.replace(/^\s*[\-\*] (.*)/gm, '<ul><li>$1</li></ul>');
+    html = html.replace(/<\/ul>\n<ul>/g, '');
+
+    // Handle ordered lists
+    html = html.replace(/^\s*\d+\. (.*)/gm, '<ol><li>$1</li></ol>');
+    html = html.replace(/<\/ol>\n<ol>/g, '');
+
+    // Handle code blocks
+    html = html.replace(/```([\s\S]*?)```/g, (match, p1) => {
+        const code = p1.trim();
+        return `<pre><code>${code}</code></pre>`;
+    });
+
+    // Handle paragraphs
+    html = html.split(/\n\n+/).map(p => {
+        if (p.startsWith('<h') || p.startsWith('<ul') || p.startsWith('<ol') || p.startsWith('<pre')) {
+            return p;
+        }
+        return p.trim() ? `<p>${p.replace(/\n/g, '<br>')}</p>` : '';
+    }).join('');
+
+    return html;
+}
+
+async function loadAboutContent() {
+    const readmeDisplay = document.getElementById('readme-display');
+    try {
+        const response = await fetch('../README.md');
+        if (!response.ok) throw new Error('Failed to fetch README.md');
+        const rawReadmeContent = await response.text();
+        readmeDisplay.innerHTML = simpleMarkdownToHtml(rawReadmeContent);
+    } catch (error) {
+        console.error("Error loading README content:", error);
+        readmeDisplay.innerHTML = '<p>Error loading content. Please try again.</p>';
+    }
 }
 
 
@@ -1398,6 +1453,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     document.getElementById('list-context-menu').style.display = 'none';
   });
+
+  // --- ABOUT TAB LOGIC ---
+  loadAboutContent();
 
   // Final setup
     document.getElementById('version-display').addEventListener('click', () => {

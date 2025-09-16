@@ -1,6 +1,6 @@
 /*
-* Timestamp: 2025-09-16 11:03 AM
-* Version: 10.7
+* Timestamp: 2025-09-16 12:09 PM
+* Version: 10.9
 */
 /* --- Liquid Glass Theme (Light) --- */
 
@@ -1377,5 +1377,58 @@ input:checked + .slider:before { transform: translateX(20px); }
 .copy-json-btn svg {
     width: 16px;
     height: 16px;
+}
+
+/* --- About Tab Styles --- */
+.readme-content {
+    line-height: 1.6;
+    color: #333;
+    margin-top: 12px;
+}
+.readme-content h1, .readme-content h2, .readme-content h3 {
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding-bottom: 8px;
+    margin-top: 24px;
+    margin-bottom: 16px;
+    color: #1a202c;
+}
+.readme-content h1 { font-size: 1.8em; }
+.readme-content h2 { font-size: 1.5em; }
+.readme-content h3 { font-size: 1.2em; }
+.readme-content p {
+    margin-bottom: 16px;
+}
+.readme-content ul, .readme-content ol {
+    padding-left: 20px;
+    margin-bottom: 16px;
+}
+.readme-content li {
+    margin-bottom: 8px;
+}
+.readme-content a {
+    color: #005A9C;
+    text-decoration: none;
+}
+.readme-content a:hover {
+    text-decoration: underline;
+}
+.readme-content code {
+    font-family: 'Courier New', Courier, monospace;
+    background-color: rgba(0,0,0,0.05);
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+.readme-content pre {
+    background-color: rgba(0,0,0,0.05);
+    border-radius: 8px;
+    padding: 10px;
+    overflow-x: auto;
+    white-space: pre;
+    word-wrap: normal;
+}
+.readme-content pre code {
+    background: none;
+    padding: 0;
 }
 
