@@ -1,6 +1,6 @@
 /*
-* Timestamp: 2025-09-16 12:09 PM
-* Version: 10.9
+* Timestamp: 2025-09-16 13:35 PM
+* Version: 11.4
 */
 /* --- Liquid Glass Theme (Light) --- */
 
@@ -177,6 +177,9 @@ body {
     transition: border-color 0.3s, color 0.3s;
     text-align: center;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .tab-button:not(:has(.badge)) {
@@ -212,7 +215,7 @@ body {
 .tab-content { 
     display: none;
     flex-grow: 1;
-    overflow-y: auto;
+    overflow-y: hidden;
     display: flex;
     flex-direction: column;
 }
@@ -221,19 +224,19 @@ body {
 }
 
 .section { 
-    margin-top: 12px;
     flex-grow: 1;
     display: flex;
     flex-direction: column;
+    overflow-y: hidden; /* This is important */
 }
 
 h3 {
     color: #1a202c;
 }
 
-.found-list, .connections-list {
+.found-list, .connections-list, .report-display-container {
     list-style: none;
-    margin-top: 12px;
+    margin-top: 8px; /* Reduced from 12px */
     overflow-y: auto;
     padding: 0; 
     flex-grow: 1;
@@ -293,6 +296,22 @@ h3 {
     flex-shrink: 0;
 }
 
+.report-actions button {
+    position: relative;
+    overflow: hidden;
+    flex: 1 1 0;
+    text-align: center;
+    white-space: nowrap;
+    margin-top: 12px;
+    padding: 10px 8px;
+    font-size: 0.9em;
+    font-weight: 500;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s, transform 0.2s, opacity 0.2s;
+}
+
+
 #clearBtn:hover, #updateMasterBtn:hover, #createConnectionBtn:hover {
     background: rgba(0, 0, 0, 0.06);
 }
@@ -307,6 +326,39 @@ h3 {
     background-color: rgba(220, 38, 38, 0.7) !important;
     color: white !important;
     border-color: rgba(220, 38, 38, 0.1) !important;
+}
+
+.report-actions {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.report-actions button.btn-primary {
+    background-color: #005A9C;
+    color: white;
+    border: 1px solid transparent;
+}
+.report-actions button.btn-primary:hover:not(:disabled) {
+    background-color: #004a7c;
+    transform: translateY(-1px);
+}
+.report-actions button.btn-secondary {
+    background-color: #e5e7eb;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+.report-actions button.btn-secondary:hover:not(:disabled) {
+    background-color: #d1d5db;
+    transform: translateY(-1px);
+}
+.report-actions button:disabled {
+    cursor: not-allowed !important;
+    background-color: #f3f4f6 !important;
+    color: #9ca3af !important;
+    border-color: #e5e7eb !important;
+    transform: none;
+    opacity: 0.7;
 }
 
 
@@ -819,7 +871,6 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 .modal-actions .btn-primary:hover {
     background-color: #004a7c;
-    transform: translateY(-1px);
 }
 
 .connection-form .setting-item {
@@ -1271,13 +1322,38 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 
 /* --- Report Modal Formatted View Styles --- */
-#report-formatted-view {
-    max-height: 40vh;
+#report-formatted-view, #report-formatted-view-sidepanel {
+    max-height: 65vh;
     overflow-y: auto;
     padding: 5px;
     background: rgba(0,0,0,0.02);
     border-radius: 8px;
     border: 1px solid rgba(0,0,0,0.05);
+}
+
+.list-header {
+    flex-shrink: 0;
+    padding: 0 0 4px 4px;
+    margin-top: 4px;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    margin-bottom: 4px;
+}
+
+.timestamp {
+    font-size: 0.9em;
+    color: #6b7280;
+}
+
+/* --- Report Tab and re-used styles --- */
+.placeholder-text {
+    padding: 20px;
+    text-align: center;
+    color: #6b7280;
+}
+.report-display-container {
+    background: none;
+    border-radius: 8px;
+    border: none;
 }
 
 .report-student-details {
@@ -1293,7 +1369,7 @@ input:checked + .slider:before { transform: translateX(20px); }
     font-weight: 500;
     background-color: rgba(0,0,0,0.03);
     border-radius: 6px;
-    transition: background-color 0.2s;
+    transition: background-color: 0.2s;
     list-style: none; /* For Firefox */
     display: block;
 }
@@ -1344,14 +1420,18 @@ input:checked + .slider:before { transform: translateX(20px); }
     margin-top: 4px;
 }
 
-/* --- Report Modal JSON View Styles --- */
+/* --- Report Modal & Sidepanel JSON View Styles --- */
 .json-container-wrapper {
     position: relative;
 }
 
-#report-json-view pre {
+#report-json-view pre, #report-json-view-sidepanel pre {
     max-height: 40vh; /* Match the formatted view */
     overflow-y: auto;
+    background-color: rgba(0,0,0,0.05);
+    border-radius: 8px;
+    padding: 10px;
+    margin: 0;
 }
 
 .copy-json-btn {

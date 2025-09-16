@@ -1,6 +1,6 @@
 <!--
-* Timestamp: 2025-09-16 12:36 PM
-* Version: 11.1
+* Timestamp: 2025-09-16 13:35 PM
+* Version: 11.5
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -39,6 +39,9 @@
         Found
         <span class="badge"><span class="count">0</span></span>
       </button>
+      <button class="tab-button" data-tab="report" style="display: none;">
+        Report
+      </button>
       <button class="tab-button" data-tab="master">
         Master List
         <span class="badge"><span class="count">0</span></span>
@@ -53,19 +56,50 @@
       </div>
       <button id="clearBtn">Clear All</button>
     </div>
+
+    <div id="report" class="tab-content">
+        <div class="section">
+            <div class="list-header">
+                <span id="reportGeneratedTime" class="timestamp"></span>
+            </div>
+            <div id="report-display" class="report-display-container">
+                 <div id="report-formatted-view-sidepanel">
+                    <!-- Formatted report content will be rendered here -->
+                 </div>
+                 <div id="report-json-view-sidepanel" style="display: none;">
+                    <div class="json-container-wrapper">
+                        <pre><code id="reportJsonContentSidePanel"></code></pre>
+                        <button id="copyReportJsonBtnSidePanel" class="copy-json-btn" title="Copy JSON to clipboard">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="copy-icon" viewBox="0 0 16 16">
+                              <path fill-rule="evenodd" d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1H2z"/>
+                            </svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="checkmark-icon" style="display:none;" viewBox="0 0 16 16">
+                              <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                            </svg>
+                        </button>
+                    </div>
+                 </div>
+            </div>
+        </div>
+        <div class="report-actions">
+            <button id="toggleReportViewBtnSidePanel" class="btn-secondary">View JSON</button>
+            <button id="downloadReportCsvBtnSidePanel" class="btn-primary">Download CSV</button>
+        </div>
+    </div>
+    
     <div id="master" class="tab-content">
-      <button id="updateMasterBtn">Update Master List</button>
-      <input type="text" id="newItemInput" placeholder="Search Name or Days Out..." />
-      <div class="filter-section">
-          <button id="nameSortBtn" class="filter-button">Sort by Name</button>
-          <button id="daysOutSortBtn" class="filter-button">Sort by Days Out</button>
-      </div>
       <div class="section">
         <div class="list-header">
           <span id="lastUpdatedTime" class="timestamp"></span>
         </div>
+        <input type="text" id="newItemInput" placeholder="Search Name or Days Out..." />
+        <div class="filter-section">
+            <button id="nameSortBtn" class="filter-button">Sort by Name</button>
+            <button id="daysOutSortBtn" class="filter-button">Sort by Days Out</button>
+        </div>
         <ul id="masterList" class="found-list"></ul>
       </div>
+      <button id="updateMasterBtn">Update Master List</button>
     </div>
     
     <div id="settings" class="tab-content">

@@ -1,5 +1,5 @@
-// [2025-09-15]
-// Version: 11.0
+// [2025-09-16 12:55 PM]
+// Version: 11.1
 import { startLoop, stopLoop, processNextInQueue, addToFoundUrlCache } from './looper.js';
 import { STORAGE_KEYS, CHECKER_MODES, MESSAGE_TYPES, EXTENSION_STATES, CONNECTION_TYPES } from '../constants.js';
 
@@ -51,6 +51,9 @@ async function onMissingCheckCompleted() {
             args: [ successMessage ]
         });
     }
+    
+    // **MODIFIED**: Save the final report to storage so the Report tab can access it.
+    await chrome.storage.local.set({ [STORAGE_KEYS.LATEST_MISSING_REPORT]: summaryPayload });
 
     // Send a message to the side panel to show the final report modal.
     chrome.runtime.sendMessage({
@@ -210,4 +213,3 @@ updateBadge();
 chrome.storage.local.get(STORAGE_KEYS.EXTENSION_STATE, data => {
     handleStateChange(data[STORAGE_KEYS.EXTENSION_STATE]);
 });
-

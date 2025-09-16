@@ -1,11 +1,10 @@
-// [2025-09-16]
-// Version: 11.0
+// [2025-09-16 13:26 PM]
+// Version: 11.4
 import { STORAGE_KEYS, DEFAULT_SETTINGS, ADVANCED_FILTER_REGEX, SHAREPOINT_URL, CHECKER_MODES, EXTENSION_STATES, MESSAGE_TYPES, CONNECTION_TYPES } from '../constants.js';
 
 let lastActiveTab = 'found'; // Variable to store the last active tab before 'about'
 
 // --- RENDER FUNCTIONS ---
-// ... (render functions are unchanged) ...
 export function renderFoundList(entries) {
   const list = document.getElementById('foundList');
   list.innerHTML = '';
@@ -187,12 +186,11 @@ function renderConnectionsList(connections = []) {
     });
 }
 
-function renderFormattedReport(reportData) {
-    const container = document.getElementById('report-formatted-view');
+function renderReportContent(reportData, container) {
     container.innerHTML = '';
 
     if (!reportData || !reportData.details || reportData.details.length === 0) {
-        container.textContent = 'No missing assignments found.';
+        container.innerHTML = '<p class="placeholder-text">No missing assignments found in the latest report, or a report has not been generated yet.</p>';
         return;
     }
 
@@ -241,6 +239,51 @@ function renderFormattedReport(reportData) {
         details.appendChild(assignmentsList);
         container.appendChild(details);
     });
+}
+
+// Function for the modal
+function renderFormattedReport(reportData) {
+    const container = document.getElementById('report-formatted-view');
+    renderReportContent(reportData, container);
+}
+
+// Function for the new Report tab
+function renderReportInTab(reportData) {
+    const container = document.getElementById('report-formatted-view-sidepanel');
+    const toggleBtn = document.getElementById('toggleReportViewBtnSidePanel');
+    const downloadBtn = document.getElementById('downloadReportCsvBtnSidePanel');
+    const jsonView = document.getElementById('report-json-view-sidepanel');
+    const formattedView = document.getElementById('report-formatted-view-sidepanel');
+    const timestampEl = document.getElementById('reportGeneratedTime');
+    const headerEl = timestampEl.parentElement;
+
+    latestReportData = reportData; // Store for CSV download and JSON view
+
+    const hasReport = reportData && reportData.details && reportData.details.length > 0;
+
+    if (toggleBtn) toggleBtn.disabled = !hasReport;
+    if (downloadBtn) downloadBtn.disabled = !hasReport;
+
+    if (reportData && reportData.reportGenerated) {
+        const date = new Date(reportData.reportGenerated);
+        const timestampStr = date.toLocaleDateString('en-US', {
+            month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
+        }).replace(',', '');
+        timestampEl.textContent = `Generated: ${timestampStr}`;
+        headerEl.style.display = 'block';
+    } else {
+        timestampEl.textContent = '';
+        headerEl.style.display = 'none';
+    }
+
+    // Reset view state to default (formatted)
+    if (formattedView) formattedView.style.display = 'block';
+    if (jsonView) jsonView.style.display = 'none';
+    if (toggleBtn) toggleBtn.textContent = 'View JSON';
+    
+    if (container) {
+        renderReportContent(reportData, container);
+    }
 }
 
 
@@ -304,7 +347,8 @@ let activeSort = { criterion: 'none', direction: 'none' };
 let connectionToDelete = null;
 let connectionToExport = null;
 let currentSessionId = null;
-let finalReportData = null; // Store the final report data
+let finalReportData = null; // Store the final report data for the modal
+let latestReportData = null; // Store the latest report data for the side panel tab
 
 async function displayMasterList() {
     const { [STORAGE_KEYS.MASTER_ENTRIES]: masterEntries = [] } = await chrome.storage.local.get(STORAGE_KEYS.MASTER_ENTRIES);
@@ -426,6 +470,11 @@ async function updateMasterFromClipboard() {
         updateBtn.textContent = 'Update Master List';
     }, 4000);
   }
+}
+
+async function loadLatestReport() {
+    const { [STORAGE_KEYS.LATEST_MISSING_REPORT]: reportData } = await chrome.storage.local.get(STORAGE_KEYS.LATEST_MISSING_REPORT);
+    renderReportInTab(reportData);
 }
 
 // --- UI HELPER FUNCTIONS ---
@@ -793,7 +842,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const jsonView = document.getElementById('report-json-view');
         const toggleBtn = document.getElementById('toggleReportViewBtn');
 
-        if (finalReportData.details.length > 0) {
+        if (finalReportData && finalReportData.details && finalReportData.details.length > 0) {
             summaryEl.textContent = `Scan complete. Found missing assignments for ${finalReportData.totalStudentsWithMissing} student(s).`;
         } else {
             summaryEl.textContent = "Scan complete. No missing assignments were found for any students in the list.";
@@ -854,12 +903,30 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateModeDisplay(mode) {
     const display = document.getElementById('activeModeDisplay');
     const keywordSection = document.querySelector('.keyword-section');
+    const foundTabButton = document.querySelector('.tab-button[data-tab="found"]');
+    const reportTabButton = document.querySelector('.tab-button[data-tab="report"]');
+    
     if (mode === CHECKER_MODES.MISSING) {
         display.textContent = 'Missing Assignments';
         keywordSection.style.display = 'none';
-    } else {
+        
+        foundTabButton.style.display = 'none';
+        reportTabButton.style.display = 'flex';
+        
+        if (foundTabButton.classList.contains('active')) {
+            switchTab('report');
+        }
+        
+    } else { // SUBMISSION mode
         display.textContent = 'Submission Check';
         keywordSection.style.display = 'block';
+        
+        foundTabButton.style.display = 'flex';
+        reportTabButton.style.display = 'none';
+        
+        if (reportTabButton.classList.contains('active')) {
+            switchTab('found');
+        }
     }
   }
 
@@ -867,6 +934,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateKeywordDisplay();
   updateLoopCounter();
   displayMasterList();
+  loadLatestReport();
   
   chrome.storage.local.get({ [STORAGE_KEYS.FOUND_ENTRIES]: [] }, data => {
     const entries = data[STORAGE_KEYS.FOUND_ENTRIES];
@@ -913,6 +981,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (changes[STORAGE_KEYS.CHECKER_MODE]) {
       updateModeDisplay(changes[STORAGE_KEYS.CHECKER_MODE].newValue);
+    }
+    if (changes[STORAGE_KEYS.LATEST_MISSING_REPORT]) {
+      renderReportInTab(changes[STORAGE_KEYS.LATEST_MISSING_REPORT].newValue);
     }
   });
 
@@ -1042,7 +1113,6 @@ document.addEventListener('DOMContentLoaded', () => {
           jsonView.style.display = 'block';
           formattedView.style.display = 'none';
           btn.textContent = 'Formatted View';
-          // Populate JSON content if not already done
           const jsonContent = document.getElementById('reportJsonContent');
           if (finalReportData) {
               jsonContent.textContent = JSON.stringify(finalReportData, null, 2);
@@ -1055,21 +1125,68 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error("No report data available to download.");
           return;
       }
-      
       const csvContent = generateCsvContent(finalReportData);
-      
       if (!csvContent) {
-          alert("There is no data to export."); // Or handle this more gracefully
+          alert("There is no data to export.");
           return;
       }
-      
       const today = new Date();
       const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const filename = `Missing_Assignments_Report_${dateStr}.csv`;
-      
       downloadCsv(csvContent, filename);
   });
   
+  // --- Report Tab Logic ---
+  document.getElementById('downloadReportCsvBtnSidePanel').addEventListener('click', () => {
+      if (!latestReportData) return;
+      const csvContent = generateCsvContent(latestReportData);
+      if (!csvContent) return;
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const filename = `Missing_Assignments_Report_${dateStr}.csv`;
+      downloadCsv(csvContent, filename);
+  });
+
+  document.getElementById('toggleReportViewBtnSidePanel').addEventListener('click', (e) => {
+      const btn = e.target;
+      const formattedView = document.getElementById('report-formatted-view-sidepanel');
+      const jsonView = document.getElementById('report-json-view-sidepanel');
+      const isJsonVisible = jsonView.style.display === 'block';
+
+      if (isJsonVisible) {
+          jsonView.style.display = 'none';
+          formattedView.style.display = 'block';
+          btn.textContent = 'View JSON';
+      } else {
+          formattedView.style.display = 'none';
+          jsonView.style.display = 'block';
+          btn.textContent = 'Formatted View';
+          const jsonContentEl = document.getElementById('reportJsonContentSidePanel');
+          if (latestReportData && jsonContentEl) {
+              jsonContentEl.textContent = JSON.stringify(latestReportData, null, 2);
+          }
+      }
+  });
+  
+  document.getElementById('copyReportJsonBtnSidePanel').addEventListener('click', (e) => {
+      const btn = e.currentTarget;
+      const jsonText = document.getElementById('reportJsonContentSidePanel').textContent;
+      
+      navigator.clipboard.writeText(jsonText).then(() => {
+          const copyIcon = btn.querySelector('.copy-icon');
+          const checkmarkIcon = btn.querySelector('.checkmark-icon');
+          copyIcon.style.display = 'none';
+          checkmarkIcon.style.display = 'inline-block';
+          
+          setTimeout(() => {
+              copyIcon.style.display = 'inline-block';
+              checkmarkIcon.style.display = 'none';
+          }, 2000);
+      }).catch(err => {
+          console.error('Failed to copy side panel JSON: ', err);
+      });
+  });
+
   document.getElementById('copyReportJsonBtn').addEventListener('click', (e) => {
       const btn = e.currentTarget;
       const jsonText = document.getElementById('reportJsonContent').textContent;
@@ -1467,7 +1584,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-  switchTab('found');
+  // Set the default active tab based on the current mode
+  chrome.storage.local.get({ [STORAGE_KEYS.CHECKER_MODE]: CHECKER_MODES.SUBMISSION }, (data) => {
+      const initialTab = data[STORAGE_KEYS.CHECKER_MODE] === CHECKER_MODES.MISSING ? 'report' : 'found';
+      switchTab(initialTab);
+  });
+
   setupDebugConsole();
 });
 

@@ -1,5 +1,5 @@
-// [2025-09-16]
-// Version: 9.4
+// [2025-09-16 12:55 PM]
+// Version: 9.5
 /*
 * Timestamp: 2025-09-12 17:17 PM
 * Version: 8.0
@@ -60,6 +60,7 @@ export const STORAGE_KEYS = {
     LOOP_STATUS: 'loopStatus',
     CONNECTIONS: 'connections',
     DEBUG_MODE: 'debugMode',
+    LATEST_MISSING_REPORT: 'latestMissingReport', // New key for the latest report
     // Settings
     CHECKER_MODE: 'checkerMode',
     CONCURRENT_TABS: 'concurrentTabs',
@@ -91,4 +92,3 @@ export const ADVANCED_FILTER_REGEX = /^\s*([><]=?|=)\s*(\d+)\s*$/;
  * SharePoint URL for the "SharePoint" button in the settings tab.
  */
 export const SHAREPOINT_URL = "https://edukgroup3_sharepoint.com/sites/SM-StudentServices/SitePages/CollabHome.aspx";
-
