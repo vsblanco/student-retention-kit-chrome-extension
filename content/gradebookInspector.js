@@ -1,5 +1,5 @@
-// [2025-09-15]
-// Version: 9.6
+// [2025-09-16]
+// Version: 10.4
 // Note: This content script cannot use ES6 modules, so constants are redefined here.
 
 const CHECKER_MODES = {
@@ -135,9 +135,48 @@ const STORAGE_KEYS = {
 
     walkTheDOM(document.body);
   }
+  
+  /**
+   * Waits for the grade element to contain a numerical value.
+   * @returns {Promise<number|string>} A promise that resolves with the parsed grade or rejects on timeout.
+   */
+  async function getCurrentGrade() {
+      console.log('Searching for current grade...');
+      const selector = '.student_assignment.final_grade .grade';
+      
+      return new Promise((resolve, reject) => {
+          const timeout = 5000;
+          const intervalTime = 100;
+          let elapsedTime = 0;
+
+          const interval = setInterval(() => {
+              const finalGradeElement = document.querySelector(selector);
+              if (finalGradeElement) {
+                  const gradeText = finalGradeElement.textContent.trim();
+                  const gradeValue = parseFloat(gradeText.replace('%', ''));
+
+                  // Check if the parsed value is a valid number
+                  if (!isNaN(gradeValue)) {
+                      clearInterval(interval);
+                      console.log(`Success: Found grade element. Parsed grade is: ${gradeValue}`);
+                      resolve(gradeValue);
+                      return;
+                  }
+              }
+
+              elapsedTime += intervalTime;
+              if (elapsedTime >= timeout) {
+                  clearInterval(interval);
+                  console.log(`Failure: Timed out after ${timeout}ms waiting for a valid grade.`);
+                  resolve('N/A'); // Resolve with N/A instead of rejecting
+              }
+          }, intervalTime);
+      });
+  }
+
 
   // --- MISSING ASSIGNMENT CHECK LOGIC ---
-  function runMissingCheck() {
+  async function runMissingCheck() {
     console.log("Content script loaded in MISSING mode.");
     const studentName = getFirstStudentName();
     const assignmentRows = document.querySelectorAll('tr.student_assignment');
@@ -154,7 +193,6 @@ const STORAGE_KEYS = {
       const title = titleLink.textContent.trim();
       let link = titleLink.href;
 
-      // Trim the link if it contains '/submissions'
       const submissionIndex = link.indexOf('/submissions');
       if (submissionIndex !== -1) {
         link = link.substring(0, submissionIndex);
@@ -183,10 +221,10 @@ const STORAGE_KEYS = {
             const total = parseFloat(totalStr);
 
             if (!isNaN(score) && !isNaN(total) && total > 0) {
-                scoreText = (score / total) * 100; // Calculate percentage
+                scoreText = (score / total) * 100;
                 scoreValue = score;
             } else if (!isNaN(score)) {
-                scoreText = scoreStr; // Fallback to just the score if total is invalid
+                scoreText = scoreStr;
                 scoreValue = score;
             }
         } else {
@@ -260,8 +298,12 @@ const STORAGE_KEYS = {
 
     if (missingAssignments.length > 0) {
       console.log(`Found ${missingAssignments.length} missing assignments for ${studentName}:`, missingAssignments);
+      
+      const currentGrade = await getCurrentGrade();
+      
       const payload = {
           studentName: studentName,
+          currentGrade: currentGrade,
           count: missingAssignments.length,
           assignments: missingAssignments
       };

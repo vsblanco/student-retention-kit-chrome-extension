@@ -1,6 +1,8 @@
-// [2025-09-15]
-// Version: 9.7
+// [2025-09-16]
+// Version: 10.7
 import { STORAGE_KEYS, DEFAULT_SETTINGS, ADVANCED_FILTER_REGEX, SHAREPOINT_URL, CHECKER_MODES, EXTENSION_STATES, MESSAGE_TYPES, CONNECTION_TYPES } from '../constants.js';
+
+let lastActiveTab = 'found'; // Variable to store the last active tab before 'about'
 
 // --- RENDER FUNCTIONS ---
 // ... (render functions are unchanged) ...
@@ -394,6 +396,9 @@ function createRipple(event) {
 }
 
 function switchTab(tabName) {
+    if (tabName !== 'about') {
+        lastActiveTab = tabName;
+    }
     document.querySelectorAll('.tab-button').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabName));
     document.querySelectorAll('.tab-content').forEach(pane => {
         const isActive = pane.id === tabName;
@@ -486,13 +491,14 @@ function generateCsvContent(reportData) {
         return '';
     }
 
-    const headers = ["Student Name", "Assignment Title", "Due Date", "Score", "Link"];
+    const headers = ["Student Name", "Current Grade", "Assignment Title", "Due Date", "Score", "Link"];
     const rows = [headers];
 
     reportData.details.forEach(student => {
         student.assignments.forEach(assignment => {
             const row = [
                 student.studentName,
+                student.currentGrade,
                 assignment.title,
                 assignment.dueDate,
                 assignment.score,
@@ -665,7 +671,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const payload = args[1];
 
             if (typeof payload === 'object' && payload !== null) {
-                entry.innerHTML = `<details class="log-details" open><summary class="log-summary">${title}</summary><pre>${JSON.stringify(payload, null, 2)}</pre></details>`;
+                entry.innerHTML = `<details class="log-details"><summary class="log-summary">${title}</summary><pre>${JSON.stringify(payload, null, 2)}</pre></details>`;
             } else {
                 entry.textContent = title;
             }
@@ -824,6 +830,10 @@ document.addEventListener('DOMContentLoaded', () => {
   
   chrome.storage.local.get({ [STORAGE_KEYS.CONNECTIONS]: [] }, data => {
       renderConnectionsList(data[STORAGE_KEYS.CONNECTIONS]);
+  });
+  
+  chrome.storage.local.get(DEFAULT_SETTINGS, (settings) => {
+    updateModeDisplay(settings[STORAGE_KEYS.CHECKER_MODE]);
   });
 
   // Event Listeners for Storage
@@ -1269,11 +1279,6 @@ document.addEventListener('DOMContentLoaded', () => {
         consoleEl.classList.add('visible');
         toggleBtn.textContent = 'Hide Console';
     }
-    
-    const checkerModeToggle = document.getElementById('checkerModeToggle');
-    const currentMode = settings[STORAGE_KEYS.CHECKER_MODE];
-    checkerModeToggle.checked = (currentMode === CHECKER_MODES.MISSING);
-    updateModeDisplay(currentMode);
   });
 
   Object.entries(settingsToSync).forEach(([id, { key, type }]) => {
@@ -1312,10 +1317,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   
-  document.getElementById('checkerModeToggle').addEventListener('change', (event) => {
-    const newMode = event.target.checked ? CHECKER_MODES.MISSING : CHECKER_MODES.SUBMISSION;
-    chrome.storage.local.set({ [STORAGE_KEYS.CHECKER_MODE]: newMode });
-  });
+  const modeDisplayBtn = document.getElementById('activeModeDisplay');
+    modeDisplayBtn.addEventListener('click', () => {
+      chrome.storage.local.get({ [STORAGE_KEYS.CHECKER_MODE]: CHECKER_MODES.SUBMISSION }, (data) => {
+        const currentMode = data[STORAGE_KEYS.CHECKER_MODE];
+        const newMode = currentMode === CHECKER_MODES.SUBMISSION ? CHECKER_MODES.MISSING : CHECKER_MODES.SUBMISSION;
+        chrome.storage.local.set({ [STORAGE_KEYS.CHECKER_MODE]: newMode });
+        
+        modeDisplayBtn.classList.add('animate-pop');
+        modeDisplayBtn.addEventListener('animationend', () => {
+          modeDisplayBtn.classList.remove('animate-pop');
+        }, { once: true });
+      });
+    });
 
   document.getElementById('sharepointBtn').addEventListener('click', (event) => {
       createRipple(event);
@@ -1386,6 +1400,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Final setup
+    document.getElementById('version-display').addEventListener('click', () => {
+        const aboutTab = document.getElementById('about');
+        if (aboutTab.classList.contains('active')) {
+            switchTab(lastActiveTab);
+        } else {
+            switchTab('about');
+        }
+    });
+
   switchTab('found');
   setupDebugConsole();
 });
