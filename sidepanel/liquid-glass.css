@@ -1,6 +1,6 @@
 /*
-* Timestamp: 2025-09-15 10:16 AM
-* Version: 8.9
+* Timestamp: 2025-09-15 05:04 PM
+* Version: 9.5
 */
 /* --- Liquid Glass Theme (Light) --- */
 
@@ -1229,5 +1229,114 @@ input:checked + .slider:before { transform: translateX(20px); }
     border-bottom: none;
     padding-left: 15px;
     color: #a5b4fc;
+}
+
+/* --- Report Modal Formatted View Styles --- */
+#report-formatted-view {
+    max-height: 40vh;
+    overflow-y: auto;
+    padding: 5px;
+    background: rgba(0,0,0,0.02);
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.report-student-details {
+    margin-bottom: 5px;
+}
+.report-student-details[open] .report-student-summary {
+    background-color: rgba(0, 90, 156, 0.1);
+}
+
+.report-student-summary {
+    cursor: pointer;
+    padding: 10px;
+    font-weight: 500;
+    background-color: rgba(0,0,0,0.03);
+    border-radius: 6px;
+    transition: background-color 0.2s;
+    list-style: none; /* For Firefox */
+    display: block;
+}
+.report-student-summary::-webkit-details-marker {
+    display: none; /* For Chrome/Safari */
+}
+.report-student-summary::before {
+    content: '▸';
+    margin-right: 8px;
+    display: inline-block;
+    transition: transform 0.15s ease-in-out;
+}
+.report-student-details[open] > .report-student-summary::before {
+    transform: rotate(90deg);
+}
+
+.report-assignments-list {
+    list-style: none;
+    padding-left: 25px;
+    margin: 5px 0;
+}
+
+.report-assignments-list li {
+    padding: 8px 5px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+.report-assignments-list li:last-child {
+    border-bottom: none;
+}
+
+.assignment-title {
+    display: block;
+    color: #005A9C;
+    text-decoration: none;
+    cursor: pointer;
+    transition: text-decoration 0.2s;
+}
+
+.assignment-title:hover {
+    text-decoration: underline;
+}
+
+.assignment-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9em;
+    color: #6b7280;
+    margin-top: 4px;
+}
+
+/* --- Report Modal JSON View Styles --- */
+.json-container-wrapper {
+    position: relative;
+}
+
+#report-json-view pre {
+    max-height: 40vh; /* Match the formatted view */
+    overflow-y: auto;
+}
+
+.copy-json-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0,0,0,0.1);
+    border: 1px solid rgba(0,0,0,0.2);
+    border-radius: 6px;
+    color: #333;
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.copy-json-btn:hover {
+    background: rgba(0,0,0,0.2);
+}
+
+.copy-json-btn svg {
+    width: 16px;
+    height: 16px;
 }
 

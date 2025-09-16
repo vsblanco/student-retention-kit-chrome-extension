@@ -1,5 +1,5 @@
 // [2025-09-15]
-// Version: 9.1
+// Version: 9.4
 import { STORAGE_KEYS, CHECKER_MODES, ADVANCED_FILTER_REGEX, DEFAULT_SETTINGS, EXTENSION_STATES, MESSAGE_TYPES } from '../constants.js';
 
 let currentLoopIndex = 0;
@@ -9,6 +9,7 @@ let foundUrlCache = new Set();
 let activeTabs = new Map();
 let maxConcurrentTabs = DEFAULT_SETTINGS[STORAGE_KEYS.CONCURRENT_TABS];
 let currentCheckerMode = DEFAULT_SETTINGS[STORAGE_KEYS.CHECKER_MODE];
+let onCompleteCallback = null; // To hold the callback function from background.js
 
 export function addToFoundUrlCache(url) {
   if (!url || foundUrlCache.has(url)) return;
@@ -25,8 +26,18 @@ async function loadSettings() {
     currentCheckerMode = settings[STORAGE_KEYS.CHECKER_MODE] || currentCheckerMode;
 }
 
-export async function startLoop(force = false) {
+export async function startLoop(options = {}) {
+  // Check if this is a recursive call or a new start from the background script
+  if (options.onComplete) {
+    onCompleteCallback = options.onComplete;
+  } else if (options !== true) { // A fresh start without a specific callback
+    onCompleteCallback = null;
+  }
+
+  // The 'force' parameter was previously passed as a boolean 'true' for restarts
+  const force = options === true || options.force;
   if (isLooping && !force) return;
+  
   console.log('START command received.');
 
   isLooping = true;
@@ -114,12 +125,15 @@ export function processNextInQueue(finishedTabId = null) {
   if (currentLoopIndex >= masterListCache.length && activeTabs.size === 0) {
     if (currentCheckerMode === CHECKER_MODES.MISSING) {
         console.log('Completed single run for Missing Assignments check.');
-        chrome.runtime.sendMessage({ action: MESSAGE_TYPES.MISSING_CHECK_COMPLETED });
-        chrome.storage.local.set({ [STORAGE_KEYS.EXTENSION_STATE]: EXTENSION_STATES.OFF });
+        // Call the callback function directly instead of sending a message.
+        if (onCompleteCallback) {
+            onCompleteCallback();
+            onCompleteCallback = null; // Clear callback after use
+        }
         return;
     } else { // SUBMISSION mode
         console.log('Looped through entire list. Starting over.');
-        startLoop(true); // Restart for continuous loop
+        startLoop({ force: true }); // Restart for continuous loop
         return;
     }
   }
@@ -161,3 +175,4 @@ async function openTab(entry) {
         setTimeout(() => processNextInQueue(), 100);
     }
 }
+

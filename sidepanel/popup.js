@@ -1,5 +1,5 @@
 // [2025-09-15]
-// Version: 9.1
+// Version: 9.7
 import { STORAGE_KEYS, DEFAULT_SETTINGS, ADVANCED_FILTER_REGEX, SHAREPOINT_URL, CHECKER_MODES, EXTENSION_STATES, MESSAGE_TYPES, CONNECTION_TYPES } from '../constants.js';
 
 // --- RENDER FUNCTIONS ---
@@ -185,12 +185,69 @@ function renderConnectionsList(connections = []) {
     });
 }
 
+function renderFormattedReport(reportData) {
+    const container = document.getElementById('report-formatted-view');
+    container.innerHTML = '';
+
+    if (!reportData || !reportData.details || reportData.details.length === 0) {
+        container.textContent = 'No missing assignments found.';
+        return;
+    }
+
+    reportData.details.forEach(student => {
+        const details = document.createElement('details');
+        details.className = 'report-student-details';
+
+        const summary = document.createElement('summary');
+        summary.className = 'report-student-summary';
+        summary.textContent = student.studentName;
+        details.appendChild(summary);
+
+        const assignmentsList = document.createElement('ul');
+        assignmentsList.className = 'report-assignments-list';
+        
+        student.assignments.forEach(assignment => {
+            const li = document.createElement('li');
+            
+            const title = document.createElement('a');
+            title.className = 'assignment-title';
+            title.textContent = assignment.title;
+            title.href = '#'; // Prevent page jump
+            title.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (assignment.link) {
+                    chrome.tabs.create({ url: assignment.link });
+                }
+            });
+            li.appendChild(title);
+
+            const meta = document.createElement('div');
+            meta.className = 'assignment-meta';
+            
+            const dueDate = document.createElement('span');
+            dueDate.textContent = `Due: ${assignment.dueDate}`;
+            meta.appendChild(dueDate);
+
+            const score = document.createElement('span');
+            score.textContent = `Score: ${assignment.score}`;
+            meta.appendChild(score);
+
+            li.appendChild(meta);
+            assignmentsList.appendChild(li);
+        });
+        
+        details.appendChild(assignmentsList);
+        container.appendChild(details);
+    });
+}
+
 
 // --- DATA & STATE MANAGEMENT ---
 let activeSort = { criterion: 'none', direction: 'none' };
 let connectionToDelete = null;
 let connectionToExport = null;
 let currentSessionId = null;
+let finalReportData = null; // Store the final report data
 
 async function displayMasterList() {
     const { [STORAGE_KEYS.MASTER_ENTRIES]: masterEntries = [] } = await chrome.storage.local.get(STORAGE_KEYS.MASTER_ENTRIES);
@@ -415,6 +472,53 @@ function openEditConnectionModal(connection, index) {
   }
 }
 
+// --- CSV Generation ---
+function escapeCsvCell(cell) {
+    let cellString = String(cell == null ? '' : cell);
+    if (cellString.includes(',') || cellString.includes('"') || cellString.includes('\n')) {
+        cellString = '"' + cellString.replace(/"/g, '""') + '"';
+    }
+    return cellString;
+}
+
+function generateCsvContent(reportData) {
+    if (!reportData || !reportData.details || reportData.details.length === 0) {
+        return '';
+    }
+
+    const headers = ["Student Name", "Assignment Title", "Due Date", "Score", "Link"];
+    const rows = [headers];
+
+    reportData.details.forEach(student => {
+        student.assignments.forEach(assignment => {
+            const row = [
+                student.studentName,
+                assignment.title,
+                assignment.dueDate,
+                assignment.score,
+                assignment.link
+            ];
+            rows.push(row);
+        });
+    });
+    
+    return rows.map(row => row.map(escapeCsvCell).join(',')).join('\n');
+}
+
+function downloadCsv(csvContent, filename) {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+
 // --- Clipboard Auto-Detect ---
 async function checkClipboardForConnection() {
     try {
@@ -547,54 +651,42 @@ document.addEventListener('DOMContentLoaded', () => {
       const originalError = console.error;
 
       const createLogEntry = (args, type) => {
-          const firstArg = args[0];
-          const secondArg = args[1];
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${type}`;
 
-          // Handle session start logs
-          if (typeof firstArg === 'object' && firstArg !== null && firstArg.type === 'sessionStart') {
-              const { sessionId, title } = firstArg;
-              const entry = document.createElement('div');
-              entry.className = `log-entry ${type}`;
-              entry.innerHTML = `
-                  <details class="log-details" id="${sessionId}" open>
-                      <summary class="log-summary">${title} (<span>...</span>)</summary>
-                      <div class="session-body"></div>
-                  </details>
-              `;
-              logArea.appendChild(entry);
-              return;
-          }
+        // Handle special session start logs
+        if (typeof args[0] === 'object' && args[0] !== null && args[0].type === 'sessionStart') {
+            const { sessionId, title } = args[0];
+            entry.innerHTML = `<details class="log-details" id="${sessionId}" open><summary class="log-summary">${title} (<span>...</span>)</summary><div class="session-body"></div></details>`;
+        }
+        // Handle explicit args from background script for formatted logs
+        else if (Array.isArray(args)) {
+            const title = args[0];
+            const payload = args[1];
 
-          // Handle regular collapsible payload logs
-          const entry = document.createElement('div');
-          entry.className = `log-entry ${type}`;
-          if (typeof firstArg === 'string' && firstArg.toLowerCase().includes("payload") && typeof secondArg === 'object' && secondArg !== null) {
-              entry.innerHTML = `
-                  <details class="log-details">
-                      <summary class="log-summary">${firstArg}</summary>
-                      <pre>${JSON.stringify(secondArg, null, 2)}</pre>
-                  </details>
-              `;
-          } else {
-              const message = Array.from(args).map(arg => {
-                  if (typeof arg === 'object' && arg !== null) {
-                      try {
-                          if (arg.studentName && arg.count) {
-                              const assignments = arg.assignments.map(a => `  - ${a.title} (Due: ${a.dueDate})`).join('\n');
-                              return `Student: ${arg.studentName}\n${assignments}`;
-                          }
-                          return JSON.stringify(arg, null, 2);
-                      } catch (e) {
-                          return '[Unserializable Object]';
-                      }
-                  }
-                  return String(arg);
-              }).join(' ');
-              entry.textContent = message;
-          }
+            if (typeof payload === 'object' && payload !== null) {
+                entry.innerHTML = `<details class="log-details" open><summary class="log-summary">${title}</summary><pre>${JSON.stringify(payload, null, 2)}</pre></details>`;
+            } else {
+                entry.textContent = title;
+            }
+        }
+        // Handle generic console logs
+        else {
+            const message = Array.from(args).map(arg => {
+                if (typeof arg === 'object' && arg !== null) {
+                    try {
+                        return JSON.stringify(arg, null, 2);
+                    } catch (e) {
+                        return '[Unserializable Object]';
+                    }
+                }
+                return String(arg);
+            }).join(' ');
+            entry.textContent = message;
+        }
 
-          logArea.appendChild(entry);
-          logArea.scrollTop = logArea.scrollHeight;
+        logArea.appendChild(entry);
+        logArea.scrollTop = logArea.scrollHeight;
       };
 
       console.log = function(...args) {
@@ -613,9 +705,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === MESSAGE_TYPES.LOG_TO_PANEL) {
-        const { level, payload } = msg;
+        const { level, payload, args } = msg;
 
-        if (payload.type === 'SUBMISSION' && currentSessionId) {
+        if (payload && payload.type === 'SUBMISSION' && currentSessionId) {
             const sessionLog = document.getElementById(currentSessionId);
             if (sessionLog) {
                 const sessionBody = sessionLog.querySelector('.session-body');
@@ -623,14 +715,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 studentEntry.className = 'log-entry log';
                 studentEntry.textContent = `Found: ${payload.name} at ${payload.time}`;
                 sessionBody.appendChild(studentEntry);
-            }
-        } else {
-            if (level === 'warn') {
-                console.warn(payload);
-            } else {
-                console.log(payload);
+                return; 
             }
         }
+        
+        const logFunction = level === 'warn' ? console.warn : console.log;
+        if (args) {
+            logFunction(...args);
+        } else {
+            logFunction(payload);
+        }
+    } else if (msg.type === MESSAGE_TYPES.SHOW_MISSING_ASSIGNMENTS_REPORT) {
+        finalReportData = msg.payload;
+        const summaryEl = document.getElementById('reportSummaryText');
+        const formattedView = document.getElementById('report-formatted-view');
+        const jsonView = document.getElementById('report-json-view');
+        const toggleBtn = document.getElementById('toggleReportViewBtn');
+
+        if (finalReportData.details.length > 0) {
+            summaryEl.textContent = `Scan complete. Found missing assignments for ${finalReportData.totalStudentsWithMissing} student(s).`;
+        } else {
+            summaryEl.textContent = "Scan complete. No missing assignments were found for any students in the list.";
+        }
+        
+        // Render the new formatted view and show it by default
+        renderFormattedReport(finalReportData);
+        formattedView.style.display = 'block';
+        jsonView.style.display = 'none';
+        toggleBtn.textContent = 'View JSON';
+
+        openModal('report-modal');
     }
   });
 
@@ -847,6 +961,68 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { btn.textContent = 'Copy to Clipboard'; }, 2000);
   });
   document.getElementById('exportIncludeSecretToggle').addEventListener('change', updateExportView);
+
+  // --- Report Modal Logic ---
+  document.getElementById('toggleReportViewBtn').addEventListener('click', (e) => {
+      const btn = e.target;
+      const formattedView = document.getElementById('report-formatted-view');
+      const jsonView = document.getElementById('report-json-view');
+      const isJsonVisible = jsonView.style.display === 'block';
+
+      if (isJsonVisible) {
+          jsonView.style.display = 'none';
+          formattedView.style.display = 'block';
+          btn.textContent = 'View JSON';
+      } else {
+          jsonView.style.display = 'block';
+          formattedView.style.display = 'none';
+          btn.textContent = 'Formatted View';
+          // Populate JSON content if not already done
+          const jsonContent = document.getElementById('reportJsonContent');
+          if (finalReportData) {
+              jsonContent.textContent = JSON.stringify(finalReportData, null, 2);
+          }
+      }
+  });
+
+  document.getElementById('downloadReportCsvBtn').addEventListener('click', () => {
+      if (!finalReportData) {
+          console.error("No report data available to download.");
+          return;
+      }
+      
+      const csvContent = generateCsvContent(finalReportData);
+      
+      if (!csvContent) {
+          alert("There is no data to export."); // Or handle this more gracefully
+          return;
+      }
+      
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const filename = `Missing_Assignments_Report_${dateStr}.csv`;
+      
+      downloadCsv(csvContent, filename);
+  });
+  
+  document.getElementById('copyReportJsonBtn').addEventListener('click', (e) => {
+      const btn = e.currentTarget;
+      const jsonText = document.getElementById('reportJsonContent').textContent;
+      
+      navigator.clipboard.writeText(jsonText).then(() => {
+          const copyIcon = btn.querySelector('.copy-icon');
+          const checkmarkIcon = btn.querySelector('.checkmark-icon');
+          copyIcon.style.display = 'none';
+          checkmarkIcon.style.display = 'inline-block';
+          
+          setTimeout(() => {
+              copyIcon.style.display = 'inline-block';
+              checkmarkIcon.style.display = 'none';
+          }, 2000);
+      }).catch(err => {
+          console.error('Failed to copy JSON: ', err);
+      });
+  });
 
 
   document.querySelectorAll('.modal-close').forEach(btn => {
@@ -1213,3 +1389,4 @@ document.addEventListener('DOMContentLoaded', () => {
   switchTab('found');
   setupDebugConsole();
 });
+

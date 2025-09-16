@@ -1,5 +1,5 @@
 // [2025-09-15]
-// Version: 9.1
+// Version: 9.2
 /*
 * Timestamp: 2025-09-12 17:17 PM
 * Version: 8.0
@@ -37,7 +37,8 @@ export const MESSAGE_TYPES = {
     CONNECTION_TEST_RESULT: 'connection-test-result',
     SEND_DEBUG_PAYLOAD: 'send-debug-payload',
     TRIGGER_PUSHER: 'trigger-pusher',
-    LOG_TO_PANEL: 'logToPanel'
+    LOG_TO_PANEL: 'logToPanel',
+    SHOW_MISSING_ASSIGNMENTS_REPORT: 'showMissingAssignmentsReport'
 };
 
 /**

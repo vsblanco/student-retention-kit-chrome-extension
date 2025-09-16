@@ -1,5 +1,5 @@
 // [2025-09-15]
-// Version: 9.1
+// Version: 11.0
 import { startLoop, stopLoop, processNextInQueue, addToFoundUrlCache } from './looper.js';
 import { STORAGE_KEYS, CHECKER_MODES, MESSAGE_TYPES, EXTENSION_STATES, CONNECTION_TYPES } from '../constants.js';
 
@@ -8,13 +8,57 @@ const MAX_LOG_BUFFER_SIZE = 100;
 
 // --- State for collecting missing assignment results ---
 let missingAssignmentsCollector = [];
-let wasLastRunMissingMode = false;
 
 function addToLogBuffer(level, payload) {
     logBuffer.push({ level, payload, timestamp: new Date().toISOString() });
     if (logBuffer.length > MAX_LOG_BUFFER_SIZE) {
         logBuffer.shift();
     }
+}
+
+// This function holds the logic for when the missing check is complete.
+// It will be passed to the looper as a callback.
+async function onMissingCheckCompleted() {
+    console.log("MESSAGE RECEIVED: MISSING_CHECK_COMPLETED");
+    let summaryPayload;
+
+    if (missingAssignmentsCollector.length > 0) {
+        summaryPayload = {
+            type: 'MISSING_ASSIGNMENTS_REPORT',
+            totalStudentsWithMissing: missingAssignmentsCollector.length,
+            reportGenerated: new Date().toISOString(),
+            details: missingAssignmentsCollector
+        };
+        
+        await sendConnectionPings(summaryPayload);
+
+        chrome.runtime.sendMessage({
+            type: MESSAGE_TYPES.LOG_TO_PANEL,
+            level: 'warn',
+            args: [ `Final Missing Assignments Report`, summaryPayload ]
+        });
+        
+        addToLogBuffer('warn', summaryPayload);
+        
+    } else {
+        const successMessage = "Missing Assignments Check Complete: No missing assignments were found.";
+        summaryPayload = { type: 'MISSING_SUMMARY', message: successMessage, details: [] };
+        addToLogBuffer('log', summaryPayload);
+        
+        chrome.runtime.sendMessage({
+            type: MESSAGE_TYPES.LOG_TO_PANEL,
+            level: 'log',
+            args: [ successMessage ]
+        });
+    }
+
+    // Send a message to the side panel to show the final report modal.
+    chrome.runtime.sendMessage({
+        type: MESSAGE_TYPES.SHOW_MISSING_ASSIGNMENTS_REPORT,
+        payload: summaryPayload
+    });
+    
+    chrome.storage.local.set({ [STORAGE_KEYS.EXTENSION_STATE]: EXTENSION_STATES.OFF });
 }
 
 // --- CORE LISTENERS ---
@@ -35,47 +79,41 @@ chrome.storage.onChanged.addListener((changes) => {
     updateBadge();
   }
 });
+
 chrome.runtime.onMessage.addListener(async (msg, sender) => {
-  if (msg.action === MESSAGE_TYPES.INSPECTION_RESULT) {
+  if (msg.type === MESSAGE_TYPES.INSPECTION_RESULT) {
     if (msg.found && msg.entry) {
       await addStudentToFoundList(msg.entry);
-      sendConnectionPings(msg.entry);
+      await sendConnectionPings(msg.entry);
     }
     if (sender.tab?.id) {
       chrome.tabs.remove(sender.tab.id).catch(e => console.error(`Error removing tab ${sender.tab.id}:`, e));
       processNextInQueue(sender.tab.id);
     }
-  } else if (msg.action === MESSAGE_TYPES.FOUND_SUBMISSION) {
+  } else if (msg.type === MESSAGE_TYPES.FOUND_SUBMISSION) {
       const logPayload = { type: 'SUBMISSION', ...msg.payload };
       addToLogBuffer('log', logPayload);
       chrome.runtime.sendMessage({ type: MESSAGE_TYPES.LOG_TO_PANEL, level: 'log', payload: logPayload });
-  } else if (msg.action === MESSAGE_TYPES.FOUND_MISSING_ASSIGNMENTS) {
+  } else if (msg.type === MESSAGE_TYPES.FOUND_MISSING_ASSIGNMENTS) {
       missingAssignmentsCollector.push(msg.payload);
-  } else if (msg.action === MESSAGE_TYPES.MISSING_CHECK_COMPLETED) {
-      if (missingAssignmentsCollector.length > 0) {
-          const summaryPayload = {
-              type: 'MISSING_SUMMARY',
-              totalStudentsWithMissing: missingAssignmentsCollector.length,
-              details: missingAssignmentsCollector
-          };
-          addToLogBuffer('warn', summaryPayload);
-          chrome.runtime.sendMessage({ type: MESSAGE_TYPES.LOG_TO_PANEL, level: 'warn', payload: summaryPayload });
-      } else {
-          const summaryPayload = { type: 'MISSING_SUMMARY', message: "SUCCESS: No missing assignments found for any students in the list." };
-          addToLogBuffer('log', summaryPayload);
-          chrome.runtime.sendMessage({ type: MESSAGE_TYPES.LOG_TO_PANEL, level: 'log', payload: summaryPayload });
-      }
-      chrome.storage.local.set({ [STORAGE_KEYS.EXTENSION_STATE]: EXTENSION_STATES.OFF });
+      chrome.runtime.sendMessage({
+          type: MESSAGE_TYPES.LOG_TO_PANEL,
+          level: 'warn',
+          args: [
+              `Missing Assignments Found for ${msg.payload.studentName}`,
+              msg.payload
+          ]
+      });
   } else if (msg.type === MESSAGE_TYPES.REQUEST_STORED_LOGS) {
       if (logBuffer.length > 0) {
           chrome.runtime.sendMessage({ type: MESSAGE_TYPES.STORED_LOGS, payload: logBuffer });
           logBuffer = [];
       }
   } else if (msg.type === MESSAGE_TYPES.TEST_CONNECTION_PA) {
-    handlePaConnectionTest(msg.connection);
+    await handlePaConnectionTest(msg.connection);
   } else if (msg.type === MESSAGE_TYPES.SEND_DEBUG_PAYLOAD) {
     if (msg.payload) {
-      sendConnectionPings(msg.payload);
+      await sendConnectionPings(msg.payload);
     }
   }
 });
@@ -89,9 +127,12 @@ async function sendConnectionPings(payload) {
     if (!bodyPayload.debug && debugMode) {
       bodyPayload.debug = true;
     }
+
+    const pingPromises = [];
+
     for (const conn of connections) {
         if (conn.type === CONNECTION_TYPES.POWER_AUTOMATE) {
-            triggerPowerAutomate(conn, bodyPayload);
+            pingPromises.push(triggerPowerAutomate(conn, bodyPayload));
         } else if (conn.type === CONNECTION_TYPES.PUSHER) {
             chrome.runtime.sendMessage({
                 type: MESSAGE_TYPES.TRIGGER_PUSHER,
@@ -101,12 +142,16 @@ async function sendConnectionPings(payload) {
             }).catch(e => console.error("Error sending to offscreen:", e));
         }
     }
+    await Promise.all(pingPromises);
+    console.log("All connection pings have been sent.");
 }
+
 async function handlePaConnectionTest(connection) {
     const testPayload = { name: 'Test Submission', url: '#', grade: '100', timestamp: new Date().toISOString(), test: true };
     const result = await triggerPowerAutomate(connection, testPayload);
     chrome.runtime.sendMessage({ type: MESSAGE_TYPES.CONNECTION_TEST_RESULT, connectionType: CONNECTION_TYPES.POWER_AUTOMATE, success: result.success, error: result.error || 'Check service worker console for details.' });
 }
+
 async function triggerPowerAutomate(connection, payload) {
   try {
     const resp = await fetch(connection.url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
@@ -138,13 +183,14 @@ async function handleStateChange(newState, oldState) {
         const settings = await chrome.storage.local.get(STORAGE_KEYS.CHECKER_MODE);
         const currentMode = settings[STORAGE_KEYS.CHECKER_MODE] || CHECKER_MODES.SUBMISSION;
         
-        wasLastRunMissingMode = (currentMode === CHECKER_MODES.MISSING);
-        
-        if (wasLastRunMissingMode) {
+        if (currentMode === CHECKER_MODES.MISSING) {
             missingAssignmentsCollector = [];
             console.log("Starting Missing Assignments check. Collector has been cleared.");
+            // Pass the callback function to the looper.
+            startLoop({ onComplete: onMissingCheckCompleted });
+        } else {
+            startLoop();
         }
-        startLoop();
     } else if (newState === EXTENSION_STATES.OFF && oldState === EXTENSION_STATES.ON) {
         stopLoop();
     }
@@ -164,3 +210,4 @@ updateBadge();
 chrome.storage.local.get(STORAGE_KEYS.EXTENSION_STATE, data => {
     handleStateChange(data[STORAGE_KEYS.EXTENSION_STATE]);
 });
+
