@@ -1,5 +1,5 @@
-// [2025-09-16 12:55 PM]
-// Version: 9.5
+// [2025-09-16 15:39 PM]
+// Version: 9.8
 /*
 * Timestamp: 2025-09-12 17:17 PM
 * Version: 8.0
@@ -38,7 +38,8 @@ export const MESSAGE_TYPES = {
     SEND_DEBUG_PAYLOAD: 'send-debug-payload',
     TRIGGER_PUSHER: 'trigger-pusher',
     LOG_TO_PANEL: 'logToPanel',
-    SHOW_MISSING_ASSIGNMENTS_REPORT: 'showMissingAssignmentsReport'
+    SHOW_MISSING_ASSIGNMENTS_REPORT: 'showMissingAssignmentsReport',
+    UPDATE_SCHEDULE: 'updateSchedule'
 };
 
 /**
@@ -60,7 +61,7 @@ export const STORAGE_KEYS = {
     LOOP_STATUS: 'loopStatus',
     CONNECTIONS: 'connections',
     DEBUG_MODE: 'debugMode',
-    LATEST_MISSING_REPORT: 'latestMissingReport', // New key for the latest report
+    LATEST_MISSING_REPORT: 'latestMissingReport', 
     // Settings
     CHECKER_MODE: 'checkerMode',
     CONCURRENT_TABS: 'concurrentTabs',
@@ -68,6 +69,9 @@ export const STORAGE_KEYS = {
     CUSTOM_KEYWORD: 'customKeyword',
     LOOPER_DAYS_OUT_FILTER: 'looperDaysOutFilter',
     EMBED_IN_CANVAS: 'embedInCanvas',
+    SCHEDULED_CHECK_ENABLED: 'scheduledCheckEnabled',
+    SCHEDULED_CHECK_TIME: 'scheduledCheckTime',
+    SCHEDULED_MASTER_LIST: 'scheduledMasterList'
 };
 
 /**
@@ -81,7 +85,15 @@ export const DEFAULT_SETTINGS = {
     [STORAGE_KEYS.LOOPER_DAYS_OUT_FILTER]: 'all',
     [STORAGE_KEYS.DEBUG_MODE]: false,
     [STORAGE_KEYS.EMBED_IN_CANVAS]: true,
+    [STORAGE_KEYS.SCHEDULED_CHECK_ENABLED]: false,
+    [STORAGE_KEYS.SCHEDULED_CHECK_TIME]: '08:00',
+    [STORAGE_KEYS.SCHEDULED_MASTER_LIST]: ''
 };
+
+/**
+ * The name for the scheduled alarm.
+ */
+export const SCHEDULED_ALARM_NAME = 'daily_missing_check';
 
 /**
  * Regular expression for parsing advanced filter queries like '>=5' or '<10'.
@@ -92,3 +104,4 @@ export const ADVANCED_FILTER_REGEX = /^\s*([><]=?|=)\s*(\d+)\s*$/;
  * SharePoint URL for the "SharePoint" button in the settings tab.
  */
 export const SHAREPOINT_URL = "https://edukgroup3_sharepoint.com/sites/SM-StudentServices/SitePages/CollabHome.aspx";
+

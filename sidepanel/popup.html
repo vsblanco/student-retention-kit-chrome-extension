@@ -1,6 +1,6 @@
 <!--
-* Timestamp: 2025-09-16 13:35 PM
-* Version: 11.5
+* Timestamp: 2025-09-16 14:34 PM
+* Version: 12.3
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -106,43 +106,42 @@
         <div class="settings-scroll-container">
             <div class="section">
                 <h3>Settings</h3>
-                <div class="setting-item">
-                    <label for="checkerModeToggle">Checker Mode</label>
-                    <label class="switch">
-                        <input type="checkbox" id="checkerModeToggle">
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-                <div class="setting-item">
-                    <label for="concurrentTabsInput">Concurrent Tabs (1-10)</label>
-                    <input type="number" id="concurrentTabsInput" min="1" max="10">
-                </div>
-                <div class="setting-item">
-                    <label for="looperDaysOutFilterInput">Loop Filter: Days Out</label>
-                    <input type="text" id="looperDaysOutFilterInput" placeholder="e.g., >=5 or all">
-                </div>
-                <div class="setting-item">
-                    <label for="customKeywordInput">Custom Keyword</label>
-                    <input type="text" id="customKeywordInput" placeholder="Default: Today's Date">
-                </div>
-                <div class="setting-item">
-                    <label for="colorPicker">Highlight Color</label>
-                    <input type="color" id="colorPicker" value="#ffff00">
-                </div>
-                <div class="setting-item">
-                    <label for="debugToggle">Debug Mode</label>
-                    <label class="switch">
-                        <input type="checkbox" id="debugToggle">
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-                <div class="setting-item">
-                    <label>Debug Console</label>
-                    <button id="toggleConsoleBtn" class="filter-button">Show Console</button>
+                <div class="settings-grid">
+                    <div class="setting-card">
+                        <label for="concurrentTabsInput">Concurrent Tabs</label>
+                        <input type="number" id="concurrentTabsInput" min="1" max="10">
+                    </div>
+                    <div class="setting-card">
+                        <label for="looperDaysOutFilterInput">Loop Filter</label>
+                        <input type="text" id="looperDaysOutFilterInput" placeholder="e.g., >=5">
+                    </div>
+                    <div class="setting-card full-width">
+                        <label for="customKeywordInput">Custom Keyword</label>
+                        <input type="text" id="customKeywordInput" placeholder="Default: Today's Date">
+                    </div>
+                    <div class="setting-card">
+                        <label for="colorPicker">Highlight Color</label>
+                        <input type="color" id="colorPicker" value="#ffff00">
+                    </div>
+                    <div class="setting-card">
+                        <label for="debugToggle">Debug Mode</label>
+                        <label class="switch">
+                            <input type="checkbox" id="debugToggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="setting-card">
+                        <label>Debug Console</label>
+                        <button id="toggleConsoleBtn" class="filter-button">Show Console</button>
+                    </div>
+                     <button id="scheduleCardBtn" class="setting-card schedule-card-button">
+                        <label>Daily Schedule</label>
+                        <span id="scheduleStatus" class="schedule-status">Not Configured</span>
+                    </button>
                 </div>
 
-                <h4 style="margin-top: 20px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 15px;">Connections</h4>
-                <div id="connections-section" class="section" style="border-top: none; padding-top: 5px;">
+                <h4>Connections</h4>
+                <div id="connections-section" class="section">
                   <ul id="connectionsList" class="connections-list"></ul>
                   <button id="createConnectionBtn">Create Connection</button>
                 </div>
@@ -166,6 +165,34 @@
       <button id="copyUrlBtn">Copy Gradebook Link</button>
       <hr/>
       <button id="debugSendBtn">Send Debug to Connections</button>
+  </div>
+
+  <!-- Schedule Modal -->
+  <div id="schedule-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <span class="modal-close" data-modal-id="schedule-modal">&times;</span>
+      <h3>Daily Schedule</h3>
+      <p>Automatically run the "Missing Assignments" checker at a specific time each day.</p>
+      <div class="schedule-section">
+          <div class="schedule-control">
+              <label for="scheduleToggle">Enable Daily Check</label>
+              <label class="switch">
+                  <input type="checkbox" id="scheduleToggle">
+                  <span class="slider round"></span>
+              </label>
+          </div>
+          <div class="schedule-control">
+              <label for="scheduleTime">Run at</label>
+              <input type="time" id="scheduleTime">
+          </div>
+      </div>
+      
+      <div class="schedule-master-list-section">
+          <label for="scheduleMasterList">Scheduled Master List (JSON)</label>
+          <p class="description">Paste a master list here to automatically use it for the daily scheduled run. If left blank, the last used master list will be used instead.</p>
+          <textarea id="scheduleMasterList" rows="6" placeholder="[ { &quot;StudentName&quot;: ... } ]"></textarea>
+      </div>
+    </div>
   </div>
 
   <!-- JSON Example Modal -->

@@ -1,7 +1,8 @@
-// [2025-09-16 12:55 PM]
-// Version: 11.1
+// [2025-09-16 15:39 PM]
+// Version: 12.1
 import { startLoop, stopLoop, processNextInQueue, addToFoundUrlCache } from './looper.js';
-import { STORAGE_KEYS, CHECKER_MODES, MESSAGE_TYPES, EXTENSION_STATES, CONNECTION_TYPES } from '../constants.js';
+import { STORAGE_KEYS, CHECKER_MODES, MESSAGE_TYPES, EXTENSION_STATES, CONNECTION_TYPES, SCHEDULED_ALARM_NAME } from '../constants.js';
+import { setupSchedule, runScheduledCheck } from './schedule.js';
 
 let logBuffer = [];
 const MAX_LOG_BUFFER_SIZE = 100;
@@ -72,6 +73,7 @@ chrome.commands.onCommand.addListener((command, tab) => {
 });
 chrome.runtime.onStartup.addListener(() => {
   updateBadge();
+  setupSchedule();
   chrome.storage.local.get(STORAGE_KEYS.EXTENSION_STATE, data => handleStateChange(data[STORAGE_KEYS.EXTENSION_STATE]));
 });
 chrome.storage.onChanged.addListener((changes) => {
@@ -80,6 +82,12 @@ chrome.storage.onChanged.addListener((changes) => {
   }
   if (changes[STORAGE_KEYS.EXTENSION_STATE] || changes[STORAGE_KEYS.FOUND_ENTRIES]) {
     updateBadge();
+  }
+});
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === SCHEDULED_ALARM_NAME) {
+    runScheduledCheck();
   }
 });
 
@@ -118,6 +126,8 @@ chrome.runtime.onMessage.addListener(async (msg, sender) => {
     if (msg.payload) {
       await sendConnectionPings(msg.payload);
     }
+  } else if (msg.type === MESSAGE_TYPES.UPDATE_SCHEDULE) {
+    await setupSchedule();
   }
 });
 
@@ -210,6 +220,8 @@ async function addStudentToFoundList(entry) {
 
 // --- INITIALIZATION ---
 updateBadge();
+setupSchedule();
 chrome.storage.local.get(STORAGE_KEYS.EXTENSION_STATE, data => {
     handleStateChange(data[STORAGE_KEYS.EXTENSION_STATE]);
 });
+

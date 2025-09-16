@@ -1,5 +1,5 @@
-// [2025-09-16 13:26 PM]
-// Version: 11.4
+// [2025-09-16 14:34 PM]
+// Version: 12.3
 import { STORAGE_KEYS, DEFAULT_SETTINGS, ADVANCED_FILTER_REGEX, SHAREPOINT_URL, CHECKER_MODES, EXTENSION_STATES, MESSAGE_TYPES, CONNECTION_TYPES } from '../constants.js';
 
 let lastActiveTab = 'found'; // Variable to store the last active tab before 'about'
@@ -530,6 +530,33 @@ function updateExportView() {
     document.getElementById('exportJsonContent').textContent = JSON.stringify(exportableConn, null, 2);
 }
 
+function updateScheduleDisplay() {
+    chrome.storage.local.get({
+        [STORAGE_KEYS.SCHEDULED_CHECK_ENABLED]: false,
+        [STORAGE_KEYS.SCHEDULED_CHECK_TIME]: '08:00'
+    }, (settings) => {
+        const isEnabled = settings[STORAGE_KEYS.SCHEDULED_CHECK_ENABLED];
+        const time = settings[STORAGE_KEYS.SCHEDULED_CHECK_TIME];
+        const statusEl = document.getElementById('scheduleStatus');
+
+        if (!statusEl) return;
+
+        if (isEnabled && time) {
+            // Convert 24-hour time to 12-hour AM/PM format
+            let [hours, minutes] = time.split(':');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12 || 12; // Convert hour "0" to "12"
+            const formattedTime = `${hours}:${minutes} ${ampm}`;
+
+            statusEl.textContent = `Daily at ${formattedTime}`;
+            statusEl.classList.remove('disabled');
+        } else {
+            statusEl.textContent = 'Not Configured';
+            statusEl.classList.add('disabled');
+        }
+    });
+}
+
 // --- MODAL FUNCTIONS ---
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
@@ -935,6 +962,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateLoopCounter();
   displayMasterList();
   loadLatestReport();
+  updateScheduleDisplay();
   
   chrome.storage.local.get({ [STORAGE_KEYS.FOUND_ENTRIES]: [] }, data => {
     const entries = data[STORAGE_KEYS.FOUND_ENTRIES];
@@ -984,6 +1012,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (changes[STORAGE_KEYS.LATEST_MISSING_REPORT]) {
       renderReportInTab(changes[STORAGE_KEYS.LATEST_MISSING_REPORT].newValue);
+    }
+    if (changes[STORAGE_KEYS.SCHEDULED_CHECK_ENABLED] || changes[STORAGE_KEYS.SCHEDULED_CHECK_TIME]) {
+      updateScheduleDisplay();
     }
   });
 
@@ -1097,6 +1128,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { btn.textContent = 'Copy to Clipboard'; }, 2000);
   });
   document.getElementById('exportIncludeSecretToggle').addEventListener('change', updateExportView);
+
+  document.getElementById('scheduleCardBtn').addEventListener('click', () => {
+      openModal('schedule-modal');
+  });
 
   // --- Report Modal Logic ---
   document.getElementById('toggleReportViewBtn').addEventListener('click', (e) => {
@@ -1451,6 +1486,17 @@ document.addEventListener('DOMContentLoaded', () => {
         consoleEl.classList.add('visible');
         toggleBtn.textContent = 'Hide Console';
     }
+
+    const scheduleToggle = document.getElementById('scheduleToggle');
+    const scheduleTime = document.getElementById('scheduleTime');
+    const scheduleMasterList = document.getElementById('scheduleMasterList');
+
+    if (scheduleToggle && scheduleTime && scheduleMasterList) {
+        scheduleToggle.checked = settings[STORAGE_KEYS.SCHEDULED_CHECK_ENABLED];
+        scheduleTime.value = settings[STORAGE_KEYS.SCHEDULED_CHECK_TIME];
+        scheduleMasterList.value = settings[STORAGE_KEYS.SCHEDULED_MASTER_LIST];
+        scheduleTime.disabled = !settings[STORAGE_KEYS.SCHEDULED_CHECK_ENABLED];
+    }
   });
 
   Object.entries(settingsToSync).forEach(([id, { key, type }]) => {
@@ -1488,6 +1534,32 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleBtn.textContent = 'Show Console';
     }
   });
+
+  const scheduleToggle = document.getElementById('scheduleToggle');
+  const scheduleTime = document.getElementById('scheduleTime');
+  const scheduleMasterList = document.getElementById('scheduleMasterList');
+
+  if (scheduleToggle && scheduleTime && scheduleMasterList) {
+      scheduleToggle.addEventListener('change', (event) => {
+          const isEnabled = event.target.checked;
+          scheduleTime.disabled = !isEnabled;
+          chrome.storage.local.set({ [STORAGE_KEYS.SCHEDULED_CHECK_ENABLED]: isEnabled }, () => {
+              chrome.runtime.sendMessage({ type: MESSAGE_TYPES.UPDATE_SCHEDULE });
+          });
+      });
+    
+      scheduleTime.addEventListener('change', (event) => {
+          const time = event.target.value;
+          chrome.storage.local.set({ [STORAGE_KEYS.SCHEDULED_CHECK_TIME]: time }, () => {
+              chrome.runtime.sendMessage({ type: MESSAGE_TYPES.UPDATE_SCHEDULE });
+          });
+      });
+
+      scheduleMasterList.addEventListener('change', (event) => {
+        const listJson = event.target.value;
+        chrome.storage.local.set({ [STORAGE_KEYS.SCHEDULED_MASTER_LIST]: listJson });
+      });
+  }
   
   const modeDisplayBtn = document.getElementById('activeModeDisplay');
     modeDisplayBtn.addEventListener('click', () => {

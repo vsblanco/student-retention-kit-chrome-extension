@@ -1,6 +1,6 @@
 /*
-* Timestamp: 2025-09-16 13:35 PM
-* Version: 11.4
+* Timestamp: 2025-09-16 14:24 PM
+* Version: 12.2
 */
 /* --- Liquid Glass Theme (Light) --- */
 
@@ -387,26 +387,6 @@ h3 {
     background-color: rgba(255, 255, 255, 0.8);
 }
 
-#concurrentTabsInput, #customKeywordInput, #looperDaysOutFilterInput {
-    display: block;
-    width: 100%;
-    margin-top: 12px;
-    padding: 10px;
-    font-size: 0.95em;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    background-color: rgba(0, 0, 0, 0.02);
-    color: #333333;
-    border-radius: 0.75rem;
-    transition: background-color 0.3s, border-color 0.3s;
-}
-
-#concurrentTabsInput:focus, #customKeywordInput:focus, #looperDaysOutFilterInput:focus {
-    outline: none;
-    border-color: rgba(0, 90, 156, 0.7);
-    background-color: rgba(255, 255, 255, 0.8);
-}
-
-
 .filter-section {
     margin-top: 8px;
     display: flex;
@@ -444,23 +424,134 @@ h3 {
     overflow: visible;
 }
 
-
-.setting-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
+/* --- SETTINGS GRID STYLES --- */
+.settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
 }
 
-#colorPicker {
+.setting-card {
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 0.75rem;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.setting-card.full-width {
+    grid-column: 1 / -1;
+}
+
+.setting-card label {
+    font-size: 0.9em;
+    font-weight: 500;
+    color: #4a5568;
+}
+
+.setting-card input[type="number"],
+.setting-card input[type="text"] {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    font-size: 0.95em;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background-color: rgba(0, 0, 0, 0.02);
+    color: #333333;
+    border-radius: 0.5rem;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+.setting-card input[type="number"]:focus,
+.setting-card input[type="text"]:focus {
+    outline: none;
+    border-color: rgba(0, 90, 156, 0.7);
+    background-color: rgba(255, 255, 255, 0.8);
+}
+
+.setting-card input[type="color"] {
     border: 1px solid rgba(0, 0, 0, 0.1);
     padding: 2px;
     cursor: pointer;
-    width: 100px;
+    width: 100%;
+    height: 38px;
+    box-sizing: border-box;
     background: transparent;
-    border-radius: 4px;
+    border-radius: 0.5rem;
+}
+
+.setting-card .switch {
+    align-self: flex-start;
+}
+.setting-card .filter-button {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    font-size: 0.95em;
+    border-radius: 0.5rem;
+}
+
+#settings h4 {
+    margin-top: 20px;
+    border-top: 1px solid rgba(0,0,0,0.1);
+    padding-top: 15px;
+    margin-bottom: 10px;
+}
+
+/* --- SCHEDULE CARD & MODAL STYLES --- */
+.schedule-card-button {
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+    text-align: left;
+}
+.schedule-card-button:hover {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+.schedule-status {
+    font-size: 1.1em;
+    font-weight: 700;
+    color: #005A9C;
+}
+.schedule-status.disabled {
+    color: #6b7280;
+    font-weight: 400;
+    font-size: 1em;
+}
+
+.schedule-section {
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 0.75rem;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+}
+.schedule-control {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.schedule-control label {
+    font-size: 0.9em;
+    font-weight: 500;
+    color: #4a5568;
+}
+#scheduleTime {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background-color: rgba(0, 0, 0, 0.02);
+    border-radius: 0.5rem;
+    padding: 6px;
+}
+#scheduleTime:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .switch {
