@@ -1,5 +1,5 @@
-// [2025-09-16 14:34 PM]
-// Version: 12.3
+// [2025-09-16 16:11 PM]
+// Version: 12.4
 import { STORAGE_KEYS, DEFAULT_SETTINGS, ADVANCED_FILTER_REGEX, SHAREPOINT_URL, CHECKER_MODES, EXTENSION_STATES, MESSAGE_TYPES, CONNECTION_TYPES } from '../constants.js';
 
 let lastActiveTab = 'found'; // Variable to store the last active tab before 'about'
@@ -1075,6 +1075,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const startBtn = document.getElementById('startBtn');
   const startBtnText = document.getElementById('startBtnText');
   let isStarted;
+
+  function updateDebugUI(isEnabled) {
+    const toggleConsoleBtn = document.getElementById('toggleConsoleBtn');
+    const consoleEl = document.getElementById('debug-console');
+    
+    document.body.classList.toggle('debug-mode', isEnabled);
+    toggleConsoleBtn.style.display = isEnabled ? 'block' : 'none';
+
+    if (isEnabled) {
+        consoleEl.classList.add('visible');
+        toggleConsoleBtn.textContent = 'Hide Console';
+    } else {
+        consoleEl.classList.remove('visible');
+        toggleConsoleBtn.textContent = 'Show Console';
+    }
+  }
+
   function updateButtonState(state) {
     isStarted = (state === EXTENSION_STATES.ON);
     startBtn.classList.toggle('active', isStarted);
@@ -1477,15 +1494,9 @@ document.addEventListener('DOMContentLoaded', () => {
     colorPicker.value = settings[STORAGE_KEYS.HIGHLIGHT_COLOR];
 
     const debugToggle = document.getElementById('debugToggle');
-    debugToggle.checked = settings[STORAGE_KEYS.DEBUG_MODE];
-    document.body.classList.toggle('debug-mode', settings[STORAGE_KEYS.DEBUG_MODE]);
-
-    if (settings[STORAGE_KEYS.DEBUG_MODE]) {
-        const consoleEl = document.getElementById('debug-console');
-        const toggleBtn = document.getElementById('toggleConsoleBtn');
-        consoleEl.classList.add('visible');
-        toggleBtn.textContent = 'Hide Console';
-    }
+    const isDebugEnabled = settings[STORAGE_KEYS.DEBUG_MODE];
+    debugToggle.checked = isDebugEnabled;
+    updateDebugUI(isDebugEnabled);
 
     const scheduleToggle = document.getElementById('scheduleToggle');
     const scheduleTime = document.getElementById('scheduleTime');
@@ -1522,17 +1533,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('debugToggle').addEventListener('change', (event) => {
     const isEnabled = event.target.checked;
     chrome.storage.local.set({ [STORAGE_KEYS.DEBUG_MODE]: isEnabled });
-    document.body.classList.toggle('debug-mode', isEnabled);
-    
-    const consoleEl = document.getElementById('debug-console');
-    const toggleBtn = document.getElementById('toggleConsoleBtn');
-    if (isEnabled) {
-        consoleEl.classList.add('visible');
-        toggleBtn.textContent = 'Hide Console';
-    } else {
-        consoleEl.classList.remove('visible');
-        toggleBtn.textContent = 'Show Console';
-    }
+    updateDebugUI(isEnabled);
   });
 
   const scheduleToggle = document.getElementById('scheduleToggle');

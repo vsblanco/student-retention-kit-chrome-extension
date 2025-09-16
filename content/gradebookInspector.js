@@ -1,5 +1,5 @@
-// [2025-09-16]
-// Version: 10.4
+// [2025-09-16 16:06 PM]
+// Version: 10.7
 // Note: This content script cannot use ES6 modules, so constants are redefined here.
 
 const CHECKER_MODES = {
@@ -174,6 +174,63 @@ const STORAGE_KEYS = {
       });
   }
 
+  function isAssignmentMissing(row, now, monthMap) {
+      const submittedCell = row.querySelector('td.submitted');
+      const scoreCell = row.querySelector('td.assignment_score');
+      const dueCell = row.querySelector('td.due');
+
+      // Condition 1: Must have no submission.
+      const hasSubmission = submittedCell ? submittedCell.textContent.trim() !== '' : true;
+      if (hasSubmission) return false;
+
+      // Condition 2: Score must be 0 or '-'.
+      let isConsideredUngraded = false;
+      if (scoreCell) {
+          const scoreSpan = scoreCell.querySelector('span.grade');
+          const scoreContentForCheck = scoreSpan ? scoreSpan.textContent.trim() : scoreCell.textContent.trim();
+          if (scoreContentForCheck === '-') {
+              isConsideredUngraded = true;
+          } else {
+              const parsedScore = parseFloat(scoreContentForCheck);
+              if (!isNaN(parsedScore) && parsedScore === 0) {
+                  isConsideredUngraded = true;
+              }
+          }
+      }
+      if (!isConsideredUngraded) return false;
+
+      // Condition 3: Must be past due.
+      let isPastDue = false;
+      if (dueCell) {
+          const dueDateStr = dueCell.textContent.trim();
+          const dateRegex = /(\w{3})\s(\d{1,2})/;
+          const match = dueDateStr.match(dateRegex);
+          if (match) {
+              const month = monthMap[match[1]];
+              const day = parseInt(match[2], 10);
+              const year = now.getFullYear();
+              const dueDate = new Date(year, month, day);
+              dueDate.setHours(23, 59, 59, 999);
+              if (dueDate < now) {
+                  isPastDue = true;
+              }
+          }
+      }
+      if (!isPastDue) return false;
+      
+      return true; // All conditions met
+  }
+
+  function injectMissingPill(row) {
+      const statusCell = row.querySelector('td.status');
+      if (statusCell && !statusCell.querySelector('.submission-missing-pill')) {
+          const pillWrapper = document.createElement('span');
+          pillWrapper.className = 'submission-missing-pill';
+          pillWrapper.innerHTML = '<span dir="ltr" class="css-1pqqu0s-view--inlineBlock"><div class="css-12pzab8-pill"><div class="css-xbajoi-pill__text">missing</div></div></span>';
+          statusCell.prepend(pillWrapper);
+      }
+  }
+
 
   // --- MISSING ASSIGNMENT CHECK LOGIC ---
   async function runMissingCheck() {
@@ -199,91 +256,11 @@ const STORAGE_KEYS = {
       }
       
       const dueCell = row.querySelector('td.due');
-      const submittedCell = row.querySelector('td.submitted');
-      const gradeCell = row.querySelector('td.grade');
       const scoreCell = row.querySelector('td.assignment_score');
-
+      const scoreText = scoreCell ? (scoreCell.querySelector('span.grade') || scoreCell).textContent.trim() : 'N/A';
       const dueDateStr = dueCell ? dueCell.textContent.trim() : 'No due date';
-      const submittedContent = submittedCell ? submittedCell.textContent.trim() : 'N/A';
-      const gradeText = gradeCell ? gradeCell.textContent.trim() : 'N/A';
-      
-      let scoreText = 'N/A';
-      let scoreValue = null;
 
-      if (scoreCell) {
-        const scoreSpan = scoreCell.querySelector('span.grade');
-        const totalSpan = scoreCell.querySelector('span.tooltip > span:last-child');
-        
-        if (scoreSpan && totalSpan) {
-            const scoreStr = scoreSpan.textContent.trim();
-            const totalStr = totalSpan.textContent.replace('/', '').trim();
-            const score = parseFloat(scoreStr);
-            const total = parseFloat(totalStr);
-
-            if (!isNaN(score) && !isNaN(total) && total > 0) {
-                scoreText = (score / total) * 100;
-                scoreValue = score;
-            } else if (!isNaN(score)) {
-                scoreText = scoreStr;
-                scoreValue = score;
-            }
-        } else {
-            scoreText = scoreCell.textContent.trim();
-            const parsedScore = parseFloat(scoreText);
-            if (!isNaN(parsedScore)) {
-                scoreValue = parsedScore;
-                scoreText = parsedScore;
-            }
-        }
-      }
-
-      const hasSubmission = submittedContent !== '';
-      const hasZeroScore = scoreValue === 0;
-
-      let dueDate = null;
-      let isPastDue = false;
-      let formattedDueDate = 'Invalid Date';
-
-      if (dueCell) {
-          const dateRegex = /(\w{3})\s(\d{1,2})\s(?:by\s)?(\d{1,2}:\d{2}(?:am|pm))?/;
-          const match = dueDateStr.match(dateRegex);
-          if (match) {
-              const month = monthMap[match[1]];
-              const day = parseInt(match[2], 10);
-              const year = now.getFullYear();
-              
-              dueDate = new Date(year, month, day);
-
-              if (match[3]) {
-                  let [time, modifier] = [match[3].slice(0, -2), match[3].slice(-2)];
-                  let [hours, minutes] = time.split(':');
-                  if (hours === '12') hours = '0';
-                  if (modifier === 'pm') hours = parseInt(hours, 10) + 12;
-                  dueDate.setHours(hours, parseInt(minutes, 10), 59, 999);
-              } else {
-                  dueDate.setHours(23, 59, 59, 999);
-              }
-              isPastDue = dueDate < now;
-              formattedDueDate = dueDate.toString();
-          }
-      }
-      
-      allAssignmentsForLog.push({
-          name: title,
-          link: link,
-          dueDate: dueDateStr,
-          grade: gradeText,
-          score: scoreText,
-          submitted: submittedContent,
-          hasSubmission: hasSubmission,
-          isPastDue: isPastDue,
-          hasZeroScore: hasZeroScore,
-          formattedDueDate: formattedDueDate
-      });
-
-      const isMissing = !hasSubmission && isPastDue && hasZeroScore;
-
-      if (isMissing) {
+      if (isAssignmentMissing(row, now, monthMap)) {
         missingAssignments.push({
             title: title,
             link: link,
@@ -294,7 +271,6 @@ const STORAGE_KEYS = {
     });
 
     console.log(`Scanning gradebook for ${studentName}... Found ${assignmentRows.length} total assignments.`);
-    console.log("All assignment details:", allAssignmentsForLog);
 
     if (missingAssignments.length > 0) {
       console.log(`Found ${missingAssignments.length} missing assignments for ${studentName}:`, missingAssignments);
@@ -318,10 +294,26 @@ const STORAGE_KEYS = {
   }
 
   // --- SCRIPT EXECUTION ---
-  if (checkerMode === CHECKER_MODES.MISSING) {
-      runMissingCheck();
-  } else {
-      runSubmissionCheck();
+  
+  // Passive check: Always run this when a user is just browsing, not during an active loop.
+  if (!isLooperRun) {
+      const assignmentRows = document.querySelectorAll('tr.student_assignment');
+      const now = new Date();
+      const monthMap = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+      assignmentRows.forEach(row => {
+          if (isAssignmentMissing(row, now, monthMap)) {
+              injectMissingPill(row);
+          }
+      });
+  }
+
+  // Active check: Only run the appropriate checker if the extension is turned on.
+  if (extensionState === EXTENSION_STATES.ON) {
+      if (checkerMode === CHECKER_MODES.MISSING) {
+          runMissingCheck();
+      } else {
+          runSubmissionCheck();
+      }
   }
 
 })();

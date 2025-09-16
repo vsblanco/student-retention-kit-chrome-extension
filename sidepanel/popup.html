@@ -1,6 +1,6 @@
 <!--
-* Timestamp: 2025-09-16 14:34 PM
-* Version: 12.3
+* Timestamp: 2025-09-16 16:11 PM
+* Version: 12.4
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -123,16 +123,17 @@
                         <label for="colorPicker">Highlight Color</label>
                         <input type="color" id="colorPicker" value="#ffff00">
                     </div>
-                    <div class="setting-card">
-                        <label for="debugToggle">Debug Mode</label>
-                        <label class="switch">
-                            <input type="checkbox" id="debugToggle">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <div class="setting-card">
-                        <label>Debug Console</label>
-                        <button id="toggleConsoleBtn" class="filter-button">Show Console</button>
+                    <div class="setting-card full-width">
+                        <div class="setting-row">
+                            <label for="debugToggle">Debug Mode</label>
+                            <div class="debug-controls">
+                                <label class="switch">
+                                    <input type="checkbox" id="debugToggle">
+                                    <span class="slider round"></span>
+                                </label>
+                                <button id="toggleConsoleBtn" class="filter-button">Show Console</button>
+                            </div>
+                        </div>
                     </div>
                      <button id="scheduleCardBtn" class="setting-card schedule-card-button">
                         <label>Daily Schedule</label>

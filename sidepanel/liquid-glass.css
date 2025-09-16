@@ -1,6 +1,6 @@
 /*
-* Timestamp: 2025-09-16 14:24 PM
-* Version: 12.2
+* Timestamp: 2025-09-16 16:11 PM
+* Version: 12.3
 */
 /* --- Liquid Glass Theme (Light) --- */
 
@@ -487,12 +487,31 @@ h3 {
 .setting-card .switch {
     align-self: flex-start;
 }
+
 .setting-card .filter-button {
     width: 100%;
     box-sizing: border-box;
     padding: 10px;
     font-size: 0.95em;
     border-radius: 0.5rem;
+}
+
+.setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.debug-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+#toggleConsoleBtn {
+    display: none;
+    width: auto;
 }
 
 #settings h4 {
