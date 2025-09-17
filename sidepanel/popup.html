@@ -1,6 +1,6 @@
 <!--
-* Timestamp: 2025-09-16 16:11 PM
-* Version: 12.4
+* Timestamp: 2025-09-17 10:15 AM
+* Version: 12.9
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -111,7 +111,11 @@
                         <label for="concurrentTabsInput">Concurrent Tabs</label>
                         <input type="number" id="concurrentTabsInput" min="1" max="10">
                     </div>
-                    <div class="setting-card">
+                    <button id="scheduleCardBtn" class="setting-card schedule-card-button">
+                        <label>Daily Schedule</label>
+                        <span id="scheduleStatus" class="schedule-status">Not Configured</span>
+                    </button>
+                    <div class="setting-card" style="display: none;">
                         <label for="looperDaysOutFilterInput">Loop Filter</label>
                         <input type="text" id="looperDaysOutFilterInput" placeholder="e.g., >=5">
                     </div>
@@ -119,9 +123,21 @@
                         <label for="customKeywordInput">Custom Keyword</label>
                         <input type="text" id="customKeywordInput" placeholder="Default: Today's Date">
                     </div>
-                    <div class="setting-card">
+                    <div class="setting-card color-picker-card" id="colorPickerCard">
                         <label for="colorPicker">Highlight Color</label>
                         <input type="color" id="colorPicker" value="#ffff00">
+                    </div>
+                    <div class="setting-card">
+                        <div class="setting-row">
+                            <label for="includeAllToggle" class="info-icon-label">
+                                Include All Assignments
+                                <i class="info-icon" data-tooltip="If enabled, the 'Missing Assignments' report will include all assignments for every student, marking each as submitted or not.">i</i>
+                            </label>
+                            <label class="switch">
+                                <input type="checkbox" id="includeAllToggle">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
                     </div>
                     <div class="setting-card full-width">
                         <div class="setting-row">
@@ -135,10 +151,6 @@
                             </div>
                         </div>
                     </div>
-                     <button id="scheduleCardBtn" class="setting-card schedule-card-button">
-                        <label>Daily Schedule</label>
-                        <span id="scheduleStatus" class="schedule-status">Not Configured</span>
-                    </button>
                 </div>
 
                 <h4>Connections</h4>

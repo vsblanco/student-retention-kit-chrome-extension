@@ -1,5 +1,5 @@
-// [2025-09-16 16:06 PM]
-// Version: 10.7
+// [2025-09-16 17:40 PM]
+// Version: 10.8
 // Note: This content script cannot use ES6 modules, so constants are redefined here.
 
 const CHECKER_MODES = {
@@ -31,7 +31,8 @@ const STORAGE_KEYS = {
     FOUND_ENTRIES: 'foundEntries',
     LOOP_STATUS: 'loopStatus',
     MASTER_ENTRIES: 'masterEntries',
-    LAST_UPDATED: 'lastUpdated'
+    LAST_UPDATED: 'lastUpdated',
+    INCLUDE_ALL_ASSIGNMENTS: 'includeAllAssignments'
 };
 
 
@@ -41,6 +42,7 @@ const STORAGE_KEYS = {
   const highlightColor = settings[STORAGE_KEYS.HIGHLIGHT_COLOR] || '#ffff00';
   const customKeyword = settings[STORAGE_KEYS.CUSTOM_KEYWORD] || '';
   const checkerMode = settings[STORAGE_KEYS.CHECKER_MODE] || CHECKER_MODES.SUBMISSION;
+  const includeAllAssignments = settings[STORAGE_KEYS.INCLUDE_ALL_ASSIGNMENTS] || false;
   
   const isLooperRun = new URLSearchParams(window.location.search).has('looper');
 
@@ -237,8 +239,7 @@ const STORAGE_KEYS = {
     console.log("Content script loaded in MISSING mode.");
     const studentName = getFirstStudentName();
     const assignmentRows = document.querySelectorAll('tr.student_assignment');
-    const missingAssignments = [];
-    const allAssignmentsForLog = [];
+    const collectedAssignments = [];
     const now = new Date();
     
     const monthMap = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
@@ -249,7 +250,6 @@ const STORAGE_KEYS = {
 
       const title = titleLink.textContent.trim();
       let link = titleLink.href;
-
       const submissionIndex = link.indexOf('/submissions');
       if (submissionIndex !== -1) {
         link = link.substring(0, submissionIndex);
@@ -259,9 +259,20 @@ const STORAGE_KEYS = {
       const scoreCell = row.querySelector('td.assignment_score');
       const scoreText = scoreCell ? (scoreCell.querySelector('span.grade') || scoreCell).textContent.trim() : 'N/A';
       const dueDateStr = dueCell ? dueCell.textContent.trim() : 'No due date';
+      
+      const isMissing = isAssignmentMissing(row, now, monthMap);
 
-      if (isAssignmentMissing(row, now, monthMap)) {
-        missingAssignments.push({
+      if (includeAllAssignments) {
+        collectedAssignments.push({
+            title: title,
+            link: link,
+            dueDate: dueDateStr,
+            score: scoreText,
+            isSubmitted: !isMissing,
+            isMissing: isMissing
+        });
+      } else if (isMissing) {
+        collectedAssignments.push({
             title: title,
             link: link,
             dueDate: dueDateStr,
@@ -272,18 +283,25 @@ const STORAGE_KEYS = {
 
     console.log(`Scanning gradebook for ${studentName}... Found ${assignmentRows.length} total assignments.`);
 
-    if (missingAssignments.length > 0) {
-      console.log(`Found ${missingAssignments.length} missing assignments for ${studentName}:`, missingAssignments);
-      
-      const currentGrade = await getCurrentGrade();
-      
-      const payload = {
-          studentName: studentName,
-          currentGrade: currentGrade,
-          count: missingAssignments.length,
-          assignments: missingAssignments
-      };
-      chrome.runtime.sendMessage({ type: MESSAGE_TYPES.FOUND_MISSING_ASSIGNMENTS, payload });
+    if (includeAllAssignments) {
+        const currentGrade = await getCurrentGrade();
+        const payload = {
+            studentName: studentName,
+            currentGrade: currentGrade,
+            count: collectedAssignments.length,
+            assignments: collectedAssignments
+        };
+        chrome.runtime.sendMessage({ type: MESSAGE_TYPES.FOUND_MISSING_ASSIGNMENTS, payload });
+
+    } else if (collectedAssignments.length > 0) {
+        const currentGrade = await getCurrentGrade();
+        const payload = {
+            studentName: studentName,
+            currentGrade: currentGrade,
+            count: collectedAssignments.length,
+            assignments: collectedAssignments
+        };
+        chrome.runtime.sendMessage({ type: MESSAGE_TYPES.FOUND_MISSING_ASSIGNMENTS, payload });
     } else {
       console.log(`No missing assignments found for ${studentName}.`);
     }
@@ -317,4 +335,3 @@ const STORAGE_KEYS = {
   }
 
 })();
-

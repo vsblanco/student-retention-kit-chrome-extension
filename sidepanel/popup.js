@@ -1,5 +1,5 @@
-// [2025-09-16 16:11 PM]
-// Version: 12.4
+// [2025-09-17 09:31 AM]
+// Version: 12.6
 import { STORAGE_KEYS, DEFAULT_SETTINGS, ADVANCED_FILTER_REGEX, SHAREPOINT_URL, CHECKER_MODES, EXTENSION_STATES, MESSAGE_TYPES, CONNECTION_TYPES } from '../constants.js';
 
 let lastActiveTab = 'found'; // Variable to store the last active tab before 'about'
@@ -223,6 +223,19 @@ function renderReportContent(reportData, container) {
 
             const meta = document.createElement('div');
             meta.className = 'assignment-meta';
+
+            if (reportData.isFullReport) {
+                const statusTag = document.createElement('span');
+                statusTag.className = 'assignment-status-tag';
+                if (assignment.isSubmitted === false) {
+                    statusTag.textContent = 'Missing';
+                    statusTag.classList.add('missing');
+                } else {
+                    statusTag.textContent = 'Submitted';
+                    statusTag.classList.add('submitted');
+                }
+                meta.appendChild(statusTag);
+            }
             
             const dueDate = document.createElement('span');
             dueDate.textContent = `Due: ${assignment.dueDate}`;
@@ -622,7 +635,10 @@ function generateCsvContent(reportData) {
         return '';
     }
 
-    const headers = ["Student Name", "Current Grade", "Assignment Title", "Due Date", "Score", "Link"];
+    const headers = reportData.isFullReport
+        ? ["Student Name", "Current Grade", "Assignment Title", "Due Date", "Score", "Link", "Status"]
+        : ["Student Name", "Current Grade", "Assignment Title", "Due Date", "Score", "Link"];
+        
     const rows = [headers];
 
     reportData.details.forEach(student => {
@@ -635,6 +651,10 @@ function generateCsvContent(reportData) {
                 assignment.score,
                 assignment.link
             ];
+            if (reportData.isFullReport) {
+                const status = assignment.isSubmitted === false ? 'Missing' : (assignment.isSubmitted === true ? 'Submitted' : '');
+                row.push(status);
+            }
             rows.push(row);
         });
     });
@@ -870,7 +890,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const toggleBtn = document.getElementById('toggleReportViewBtn');
 
         if (finalReportData && finalReportData.details && finalReportData.details.length > 0) {
-            summaryEl.textContent = `Scan complete. Found missing assignments for ${finalReportData.totalStudentsWithMissing} student(s).`;
+            if (finalReportData.isFullReport) {
+                summaryEl.textContent = `Full report for ${finalReportData.totalStudentsInReport} student(s). ${finalReportData.totalStudentsWithMissing} have missing assignments.`;
+            } else {
+                summaryEl.textContent = `Scan complete. Found missing assignments for ${finalReportData.totalStudentsWithMissing} student(s).`;
+            }
         } else {
             summaryEl.textContent = "Scan complete. No missing assignments were found for any students in the list.";
         }
@@ -1015,6 +1039,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (changes[STORAGE_KEYS.SCHEDULED_CHECK_ENABLED] || changes[STORAGE_KEYS.SCHEDULED_CHECK_TIME]) {
       updateScheduleDisplay();
+    }
+    if (changes[STORAGE_KEYS.HIGHLIGHT_COLOR]) {
+        updateHighlightColorDisplay(changes[STORAGE_KEYS.HIGHLIGHT_COLOR].newValue);
     }
   });
 
@@ -1476,6 +1503,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // --- Settings Inputs ---
+    function getBrightness(hex) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return (r * 299 + g * 587 + b * 114) / 1000;
+    }
+
+    function updateHighlightColorDisplay(color) {
+        const colorCard = document.getElementById('colorPickerCard');
+        if (colorCard) {
+            colorCard.style.backgroundColor = color;
+            const label = colorCard.querySelector('label');
+            if (getBrightness(color) < 128) {
+                label.style.color = 'white';
+            } else {
+                label.style.color = '#4a5568';
+            }
+        }
+    }
+
   const settingsToSync = {
     concurrentTabsInput: { key: STORAGE_KEYS.CONCURRENT_TABS, type: 'number' },
     looperDaysOutFilterInput: { key: STORAGE_KEYS.LOOPER_DAYS_OUT_FILTER, type: 'text' },
@@ -1491,12 +1538,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const colorPicker = document.getElementById('colorPicker');
-    colorPicker.value = settings[STORAGE_KEYS.HIGHLIGHT_COLOR];
+    const colorValue = settings[STORAGE_KEYS.HIGHLIGHT_COLOR];
+    colorPicker.value = colorValue;
+    updateHighlightColorDisplay(colorValue);
 
     const debugToggle = document.getElementById('debugToggle');
     const isDebugEnabled = settings[STORAGE_KEYS.DEBUG_MODE];
     debugToggle.checked = isDebugEnabled;
     updateDebugUI(isDebugEnabled);
+
+    const includeAllToggle = document.getElementById('includeAllToggle');
+    if (includeAllToggle) {
+        includeAllToggle.checked = settings[STORAGE_KEYS.INCLUDE_ALL_ASSIGNMENTS];
+    }
 
     const scheduleToggle = document.getElementById('scheduleToggle');
     const scheduleTime = document.getElementById('scheduleTime');
@@ -1527,7 +1581,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   document.getElementById('colorPicker').addEventListener('input', (event) => {
-    chrome.storage.local.set({ [STORAGE_KEYS.HIGHLIGHT_COLOR]: event.target.value });
+    const newColor = event.target.value;
+    chrome.storage.local.set({ [STORAGE_KEYS.HIGHLIGHT_COLOR]: newColor });
+    updateHighlightColorDisplay(newColor);
   });
 
   document.getElementById('debugToggle').addEventListener('change', (event) => {
@@ -1535,6 +1591,13 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.local.set({ [STORAGE_KEYS.DEBUG_MODE]: isEnabled });
     updateDebugUI(isEnabled);
   });
+
+  const includeAllToggle = document.getElementById('includeAllToggle');
+  if (includeAllToggle) {
+    includeAllToggle.addEventListener('change', (event) => {
+        chrome.storage.local.set({ [STORAGE_KEYS.INCLUDE_ALL_ASSIGNMENTS]: event.target.checked });
+    });
+  }
 
   const scheduleToggle = document.getElementById('scheduleToggle');
   const scheduleTime = document.getElementById('scheduleTime');

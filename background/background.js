@@ -1,5 +1,5 @@
-// [2025-09-16 15:39 PM]
-// Version: 12.1
+// [2025-09-16 17:51 PM]
+// Version: 12.3
 import { startLoop, stopLoop, processNextInQueue, addToFoundUrlCache } from './looper.js';
 import { STORAGE_KEYS, CHECKER_MODES, MESSAGE_TYPES, EXTENSION_STATES, CONNECTION_TYPES, SCHEDULED_ALARM_NAME } from '../constants.js';
 import { setupSchedule, runScheduledCheck } from './schedule.js';
@@ -21,14 +21,23 @@ function addToLogBuffer(level, payload) {
 // It will be passed to the looper as a callback.
 async function onMissingCheckCompleted() {
     console.log("MESSAGE RECEIVED: MISSING_CHECK_COMPLETED");
+    const settings = await chrome.storage.local.get(STORAGE_KEYS.INCLUDE_ALL_ASSIGNMENTS);
+    const includeAll = settings[STORAGE_KEYS.INCLUDE_ALL_ASSIGNMENTS];
+
     let summaryPayload;
 
     if (missingAssignmentsCollector.length > 0) {
+        const studentsWithMissingCount = missingAssignmentsCollector.filter(studentReport => 
+            studentReport.assignments.some(assignment => assignment.isMissing === true || !('isSubmitted' in assignment))
+        ).length;
+
         summaryPayload = {
             type: 'MISSING_ASSIGNMENTS_REPORT',
-            totalStudentsWithMissing: missingAssignmentsCollector.length,
+            totalStudentsInReport: missingAssignmentsCollector.length,
+            totalStudentsWithMissing: studentsWithMissingCount,
             reportGenerated: new Date().toISOString(),
-            details: missingAssignmentsCollector
+            details: missingAssignmentsCollector,
+            isFullReport: includeAll
         };
         
         await sendConnectionPings(summaryPayload);
@@ -43,7 +52,7 @@ async function onMissingCheckCompleted() {
         
     } else {
         const successMessage = "Missing Assignments Check Complete: No missing assignments were found.";
-        summaryPayload = { type: 'MISSING_SUMMARY', message: successMessage, details: [] };
+        summaryPayload = { type: 'MISSING_SUMMARY', message: successMessage, details: [], isFullReport: includeAll };
         addToLogBuffer('log', summaryPayload);
         
         chrome.runtime.sendMessage({
@@ -53,10 +62,8 @@ async function onMissingCheckCompleted() {
         });
     }
     
-    // **MODIFIED**: Save the final report to storage so the Report tab can access it.
     await chrome.storage.local.set({ [STORAGE_KEYS.LATEST_MISSING_REPORT]: summaryPayload });
 
-    // Send a message to the side panel to show the final report modal.
     chrome.runtime.sendMessage({
         type: MESSAGE_TYPES.SHOW_MISSING_ASSIGNMENTS_REPORT,
         payload: summaryPayload
@@ -67,9 +74,9 @@ async function onMissingCheckCompleted() {
 
 // --- CORE LISTENERS ---
 
-chrome.action.onClicked.addListener((tab) => chrome.sidePanel.open({ windowId: tab.windowId }));
+chrome.action.onClicked.addListener((tab) => chrome.sidePanel.open({ tabId: tab.id }));
 chrome.commands.onCommand.addListener((command, tab) => {
-  if (command === '_execute_action') chrome.sidePanel.open({ windowId: tab.windowId });
+  if (command === '_execute_action') chrome.sidePanel.open({ tabId: tab.id });
 });
 chrome.runtime.onStartup.addListener(() => {
   updateBadge();

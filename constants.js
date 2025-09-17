@@ -1,5 +1,5 @@
-// [2025-09-16 15:39 PM]
-// Version: 9.8
+// [2025-09-16 17:40 PM]
+// Version: 9.9
 /*
 * Timestamp: 2025-09-12 17:17 PM
 * Version: 8.0
@@ -71,7 +71,8 @@ export const STORAGE_KEYS = {
     EMBED_IN_CANVAS: 'embedInCanvas',
     SCHEDULED_CHECK_ENABLED: 'scheduledCheckEnabled',
     SCHEDULED_CHECK_TIME: 'scheduledCheckTime',
-    SCHEDULED_MASTER_LIST: 'scheduledMasterList'
+    SCHEDULED_MASTER_LIST: 'scheduledMasterList',
+    INCLUDE_ALL_ASSIGNMENTS: 'includeAllAssignments'
 };
 
 /**
@@ -87,7 +88,8 @@ export const DEFAULT_SETTINGS = {
     [STORAGE_KEYS.EMBED_IN_CANVAS]: true,
     [STORAGE_KEYS.SCHEDULED_CHECK_ENABLED]: false,
     [STORAGE_KEYS.SCHEDULED_CHECK_TIME]: '08:00',
-    [STORAGE_KEYS.SCHEDULED_MASTER_LIST]: ''
+    [STORAGE_KEYS.SCHEDULED_MASTER_LIST]: '',
+    [STORAGE_KEYS.INCLUDE_ALL_ASSIGNMENTS]: false
 };
 
 /**
@@ -104,4 +106,3 @@ export const ADVANCED_FILTER_REGEX = /^\s*([><]=?|=)\s*(\d+)\s*$/;
  * SharePoint URL for the "SharePoint" button in the settings tab.
  */
 export const SHAREPOINT_URL = "https://edukgroup3_sharepoint.com/sites/SM-StudentServices/SitePages/CollabHome.aspx";
-
