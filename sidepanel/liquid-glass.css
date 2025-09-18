@@ -1,6 +1,6 @@
 /*
-* Timestamp: 2025-09-18 17:01 PM
-* Version: 12.9
+* Timestamp: 2025-09-18 19:37 PM
+* Version: 13.0
 *//* --- Liquid Glass Theme (Light) --- */
 
 html {
@@ -1481,6 +1481,22 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 .report-student-details[open] .report-student-summary {
     background-color: rgba(0, 90, 156, 0.1);
+}
+
+.report-student-details.no-missing {
+    opacity: 0.65;
+}
+
+.report-student-details.no-missing .report-student-summary {
+    cursor: default;
+}
+
+.report-student-details.no-missing .report-student-summary::before {
+    content: '✓';
+    color: #15803d;
+    font-weight: bold;
+    transition: none;
+    transform: none;
 }
 
 .report-student-summary {

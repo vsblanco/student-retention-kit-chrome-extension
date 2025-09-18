@@ -1,5 +1,5 @@
-// [2025-09-18 16:42 PM]
-// Version: 12.8
+// [2025-09-18 19:44 PM]
+// Version: 13.0
 import { STORAGE_KEYS, DEFAULT_SETTINGS, ADVANCED_FILTER_REGEX, SHAREPOINT_URL, CHECKER_MODES, EXTENSION_STATES, MESSAGE_TYPES, CONNECTION_TYPES } from '../constants.js';
 
 let lastActiveTab = 'found'; // Variable to store the last active tab before 'about'
@@ -189,7 +189,6 @@ function renderConnectionsList(connections = []) {
 function renderReportContent(reportData, container) {
     container.innerHTML = '';
     
-    // The student data is now nested inside the CUSTOM_IMPORT object.
     const studentDetails = reportData?.CUSTOM_IMPORT?.data;
 
     if (!studentDetails || studentDetails.length === 0) {
@@ -209,36 +208,47 @@ function renderReportContent(reportData, container) {
         const assignmentsList = document.createElement('ul');
         assignmentsList.className = 'report-assignments-list';
         
-        // Loop through the nested assignments array for each student
-        student.assignments.forEach(assignment => {
+        if (student.totalMissing === 0) {
+            details.classList.add('no-missing');
             const li = document.createElement('li');
-            
-            const title = document.createElement('a');
-            title.className = 'assignment-title';
-            title.textContent = assignment.assignmentTitle; // Use new key
-            title.href = '#'; // Prevent page jump
-            title.addEventListener('click', (e) => {
-                e.preventDefault();
-                if (assignment.link) {
-                    chrome.tabs.create({ url: assignment.link });
-                }
-            });
-            li.appendChild(title);
-
-            const meta = document.createElement('div');
-            meta.className = 'assignment-meta';
-            
-            const dueDate = document.createElement('span');
-            dueDate.textContent = `Due: ${assignment.dueDate}`;
-            meta.appendChild(dueDate);
-
-            const score = document.createElement('span');
-            score.textContent = `Score: ${assignment.score}`;
-            meta.appendChild(score);
-
-            li.appendChild(meta);
+            li.textContent = 'All assignments are submitted.';
+            li.style.padding = '8px 5px';
             assignmentsList.appendChild(li);
-        });
+            // Prevent the summary from being clickable to expand/collapse.
+            summary.addEventListener('click', (e) => {
+                e.preventDefault();
+            });
+        } else if (student.assignments && student.assignments.length > 0) {
+            student.assignments.forEach(assignment => {
+                const li = document.createElement('li');
+                
+                const title = document.createElement('a');
+                title.className = 'assignment-title';
+                title.textContent = assignment.assignmentTitle;
+                title.href = '#';
+                title.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (assignment.link) {
+                        chrome.tabs.create({ url: assignment.link });
+                    }
+                });
+                li.appendChild(title);
+
+                const meta = document.createElement('div');
+                meta.className = 'assignment-meta';
+                
+                const dueDate = document.createElement('span');
+                dueDate.textContent = `Due: ${assignment.dueDate}`;
+                meta.appendChild(dueDate);
+
+                const score = document.createElement('span');
+                score.textContent = `Score: ${assignment.score}`;
+                meta.appendChild(score);
+
+                li.appendChild(meta);
+                assignmentsList.appendChild(li);
+            });
+        }
         
         details.appendChild(assignmentsList);
         container.appendChild(details);

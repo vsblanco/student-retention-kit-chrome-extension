@@ -1,5 +1,5 @@
-// [2025-09-18 15:34 PM]
-// Version: 10.9
+// [2025-09-18 18:46 PM]
+// Version: 11.0
 // Note: This content script cannot use ES6 modules, so constants are redefined here.
 
 const CHECKER_MODES = {
@@ -242,12 +242,9 @@ const STORAGE_KEYS = {
     const collectedAssignments = [];
     const now = new Date();
     
-    // *** MODIFICATION START ***
-    // Get the clean gradebook URL to include in the report
     const urlObject = new URL(window.location.href);
     urlObject.searchParams.delete('looper');
     const cleanUrl = urlObject.href;
-    // *** MODIFICATION END ***
     
     const monthMap = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
 
@@ -290,30 +287,26 @@ const STORAGE_KEYS = {
 
     console.log(`Scanning gradebook for ${studentName}... Found ${assignmentRows.length} total assignments.`);
 
+    // Always get the current grade and construct a payload for every student.
+    const currentGrade = await getCurrentGrade();
+    
+    let missingCount;
     if (includeAllAssignments) {
-        const currentGrade = await getCurrentGrade();
-        const payload = {
-            studentName: studentName,
-            gradeBook: cleanUrl, // ADDED: gradebook URL
-            currentGrade: currentGrade,
-            count: collectedAssignments.length,
-            assignments: collectedAssignments
-        };
-        chrome.runtime.sendMessage({ type: MESSAGE_TYPES.FOUND_MISSING_ASSIGNMENTS, payload });
-
-    } else if (collectedAssignments.length > 0) {
-        const currentGrade = await getCurrentGrade();
-        const payload = {
-            studentName: studentName,
-            gradeBook: cleanUrl, // ADDED: gradebook URL
-            currentGrade: currentGrade,
-            count: collectedAssignments.length,
-            assignments: collectedAssignments
-        };
-        chrome.runtime.sendMessage({ type: MESSAGE_TYPES.FOUND_MISSING_ASSIGNMENTS, payload });
+        missingCount = collectedAssignments.filter(a => a.isMissing).length;
     } else {
-      console.log(`No missing assignments found for ${studentName}.`);
+        missingCount = collectedAssignments.length;
     }
+
+    const payload = {
+        studentName: studentName,
+        gradeBook: cleanUrl,
+        currentGrade: currentGrade,
+        count: missingCount,
+        assignments: collectedAssignments
+    };
+    
+    // Send the report for this student to the background script.
+    chrome.runtime.sendMessage({ type: MESSAGE_TYPES.FOUND_MISSING_ASSIGNMENTS, payload });
 
     if (isLooperRun) {
       chrome.runtime.sendMessage({ type: MESSAGE_TYPES.INSPECTION_RESULT, found: false, entry: null });
