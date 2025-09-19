@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Submission Checker",
-  "version": "8.0",
-  "description": "Highlights today’s date, triggers flows, manages Found & Master lists in the side panel.",
+  "version": "8.1",
+  "description": "Automated student submission checking. Also includes missing assignments.",
   "icons": {
     "16": "icon.png",
     "48": "icon.png",

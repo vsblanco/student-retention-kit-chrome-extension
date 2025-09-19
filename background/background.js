@@ -1,5 +1,5 @@
-// [2025-09-18 18:46 PM]
-// Version: 12.6
+// [2025-09-19 09:42 AM]
+// Version: 12.7
 import { startLoop, stopLoop, processNextInQueue, addToFoundUrlCache } from './looper.js';
 import { STORAGE_KEYS, CHECKER_MODES, MESSAGE_TYPES, EXTENSION_STATES, CONNECTION_TYPES, SCHEDULED_ALARM_NAME } from '../constants.js';
 import { setupSchedule, runScheduledCheck } from './schedule.js';
@@ -26,11 +26,11 @@ async function onMissingCheckCompleted() {
     let finalPayload;
 
     if (missingAssignmentsCollector.length > 0) {
-        // Transform the collected data to match the desired CUSTOM_IMPORT schema
         const transformedData = missingAssignmentsCollector.map(studentReport => {
             const transformedAssignments = studentReport.assignments.map(assignment => ({
                 assignmentTitle: assignment.title,
                 link: assignment.link,
+                submissionLink: assignment.submissionLink,
                 dueDate: assignment.dueDate,
                 score: assignment.score
             }));
@@ -44,9 +44,10 @@ async function onMissingCheckCompleted() {
             };
         });
         
-        const studentsWithMissingCount = missingAssignmentsCollector.filter(studentReport => studentReport.count > 0).length;
+        const studentsWithMissingCount = missingAssignmentsCollector.filter(studentReport => 
+            studentReport.count > 0
+        ).length;
 
-        // Build the final payload with the CUSTOM_IMPORT structure
         finalPayload = {
             reportGenerated: new Date().toISOString(),
             totalStudentsInReport: missingAssignmentsCollector.length,
@@ -56,7 +57,7 @@ async function onMissingCheckCompleted() {
                 importName: "Missing Assignments Report",
                 dataArrayKey: "assignments",
                 targetSheet: "Missing Assignments",
-                sheetKeyColumn: ["Link", "Grade Book"],
+                sheetKeyColumn: ["submissionLink", "Grade Book"],
                 columnMappings: [
                   { source: "studentName", target: "Student Name" },
                   { source: "studentGrade", target: ["grade", "Grade"], targetSheet: "Master List" },
@@ -65,7 +66,8 @@ async function onMissingCheckCompleted() {
                   { source: "dueDate", target: "Due Date" },
                   { source: "score", target: "Score" },
                   { source: "gradeBook", target: "Grade Book", targetSheet: "Master List" },
-                  { source: "link", target: "Link" }
+                  { source: "link", target: "Link" },
+                  { source: "submissionLink", target: "submissionLink" }
                 ],
                 data: transformedData
             }
@@ -82,7 +84,7 @@ async function onMissingCheckCompleted() {
         addToLogBuffer('warn', finalPayload);
         
     } else {
-        const successMessage = "Missing Assignments Check Complete: No students were processed or the master list was empty.";
+        const successMessage = "Missing Assignments Check Complete: No missing assignments were found.";
         finalPayload = { 
             reportGenerated: new Date().toISOString(),
             totalStudentsInReport: 0,
@@ -152,25 +154,14 @@ chrome.runtime.onMessage.addListener(async (msg, sender) => {
       chrome.runtime.sendMessage({ type: MESSAGE_TYPES.LOG_TO_PANEL, level: 'log', payload: logPayload });
   } else if (msg.type === MESSAGE_TYPES.FOUND_MISSING_ASSIGNMENTS) {
       missingAssignmentsCollector.push(msg.payload);
-      if (msg.payload.count > 0) {
-          chrome.runtime.sendMessage({
-              type: MESSAGE_TYPES.LOG_TO_PANEL,
-              level: 'warn',
-              args: [
-                  `Found ${msg.payload.count} Missing Assignment(s) for ${msg.payload.studentName}`,
-                  msg.payload
-              ]
-          });
-      } else {
-          chrome.runtime.sendMessage({
-              type: MESSAGE_TYPES.LOG_TO_PANEL,
-              level: 'log',
-              args: [
-                  `Scan complete for ${msg.payload.studentName}: No missing assignments.`,
-                  msg.payload
-              ]
-          });
-      }
+      const logMessage = msg.payload.count > 0 
+          ? `Missing Assignments Found for ${msg.payload.studentName}`
+          : `No missing assignments for ${msg.payload.studentName}`;
+      chrome.runtime.sendMessage({
+          type: MESSAGE_TYPES.LOG_TO_PANEL,
+          level: msg.payload.count > 0 ? 'warn' : 'log',
+          args: [ logMessage, msg.payload ]
+      });
   } else if (msg.type === MESSAGE_TYPES.REQUEST_STORED_LOGS) {
       if (logBuffer.length > 0) {
           chrome.runtime.sendMessage({ type: MESSAGE_TYPES.STORED_LOGS, payload: logBuffer });
@@ -280,3 +271,4 @@ setupSchedule();
 chrome.storage.local.get(STORAGE_KEYS.EXTENSION_STATE, data => {
     handleStateChange(data[STORAGE_KEYS.EXTENSION_STATE]);
 });
+

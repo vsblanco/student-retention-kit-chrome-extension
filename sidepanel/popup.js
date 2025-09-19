@@ -1,5 +1,5 @@
-// [2025-09-18 19:44 PM]
-// Version: 13.0
+// [2025-09-19 09:42 AM]
+// Version: 13.1
 import { STORAGE_KEYS, DEFAULT_SETTINGS, ADVANCED_FILTER_REGEX, SHAREPOINT_URL, CHECKER_MODES, EXTENSION_STATES, MESSAGE_TYPES, CONNECTION_TYPES } from '../constants.js';
 
 let lastActiveTab = 'found'; // Variable to store the last active tab before 'about'
@@ -229,7 +229,7 @@ function renderReportContent(reportData, container) {
                 title.addEventListener('click', (e) => {
                     e.preventDefault();
                     if (assignment.link) {
-                        chrome.tabs.create({ url: assignment.link });
+                        chrome.tabs.create({ url: assignment.submissionLink || assignment.link });
                     }
                 });
                 li.appendChild(title);
@@ -640,7 +640,7 @@ function generateCsvContent(reportData) {
 
     const headers = [
         "Student Name", "Current Grade", "Total Missing", 
-        "Grade Book", "Assignment Title", "Due Date", "Score", "Link"
+        "Grade Book", "Assignment Title", "Due Date", "Score", "Link", "Submission Link"
     ];
         
     const rows = [headers];
@@ -656,7 +656,8 @@ function generateCsvContent(reportData) {
                     assignment.assignmentTitle,
                     assignment.dueDate,
                     assignment.score,
-                    assignment.link
+                    assignment.link,
+                    assignment.submissionLink
                 ];
                 rows.push(row);
             });
@@ -666,7 +667,7 @@ function generateCsvContent(reportData) {
                 student.studentGrade,
                 student.totalMissing,
                 student.gradeBook,
-                "N/A", "N/A", "N/A", "N/A"
+                "N/A", "N/A", "N/A", "N/A", "N/A"
             ];
             rows.push(row);
         }

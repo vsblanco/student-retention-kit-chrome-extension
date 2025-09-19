@@ -1,5 +1,5 @@
-// [2025-09-18 18:46 PM]
-// Version: 11.0
+// [2025-09-19 10:23 AM]
+// Version: 11.1
 // Note: This content script cannot use ES6 modules, so constants are redefined here.
 
 const CHECKER_MODES = {
@@ -193,7 +193,7 @@ const STORAGE_KEYS = {
           if (scoreContentForCheck === '-') {
               isConsideredUngraded = true;
           } else {
-              const parsedScore = parseFloat(scoreContentForCheck);
+              const parsedScore = parseFloat(scoreContentForCheck.replace('%', ''));
               if (!isNaN(parsedScore) && parsedScore === 0) {
                   isConsideredUngraded = true;
               }
@@ -253,7 +253,8 @@ const STORAGE_KEYS = {
       if (!titleLink) return;
 
       const title = titleLink.textContent.trim();
-      let link = titleLink.href;
+      const submissionLink = titleLink.href; // Keep the original full URL
+      let link = submissionLink;
       const submissionIndex = link.indexOf('/submissions');
       if (submissionIndex !== -1) {
         link = link.substring(0, submissionIndex);
@@ -261,7 +262,10 @@ const STORAGE_KEYS = {
       
       const dueCell = row.querySelector('td.due');
       const scoreCell = row.querySelector('td.assignment_score');
-      const scoreText = scoreCell ? (scoreCell.querySelector('span.grade') || scoreCell).textContent.trim() : 'N/A';
+      let scoreText = scoreCell ? (scoreCell.querySelector('span.grade') || scoreCell).textContent.trim() : 'N/A';
+      if (scoreText.includes('%')) {
+        scoreText = scoreText.replace('%', '');
+      }
       const dueDateStr = dueCell ? dueCell.textContent.trim() : 'No due date';
       
       const isMissing = isAssignmentMissing(row, now, monthMap);
@@ -270,6 +274,7 @@ const STORAGE_KEYS = {
         collectedAssignments.push({
             title: title,
             link: link,
+            submissionLink: submissionLink,
             dueDate: dueDateStr,
             score: scoreText,
             isSubmitted: !isMissing,
@@ -279,6 +284,7 @@ const STORAGE_KEYS = {
         collectedAssignments.push({
             title: title,
             link: link,
+            submissionLink: submissionLink,
             dueDate: dueDateStr,
             score: scoreText,
         });
@@ -286,27 +292,29 @@ const STORAGE_KEYS = {
     });
 
     console.log(`Scanning gradebook for ${studentName}... Found ${assignmentRows.length} total assignments.`);
-
-    // Always get the current grade and construct a payload for every student.
     const currentGrade = await getCurrentGrade();
-    
-    let missingCount;
-    if (includeAllAssignments) {
-        missingCount = collectedAssignments.filter(a => a.isMissing).length;
-    } else {
-        missingCount = collectedAssignments.length;
-    }
 
-    const payload = {
-        studentName: studentName,
-        gradeBook: cleanUrl,
-        currentGrade: currentGrade,
-        count: missingCount,
-        assignments: collectedAssignments
-    };
-    
-    // Send the report for this student to the background script.
-    chrome.runtime.sendMessage({ type: MESSAGE_TYPES.FOUND_MISSING_ASSIGNMENTS, payload });
+    if (includeAllAssignments || collectedAssignments.length > 0) {
+        const payload = {
+            studentName: studentName,
+            gradeBook: cleanUrl,
+            currentGrade: currentGrade,
+            count: collectedAssignments.length,
+            assignments: collectedAssignments
+        };
+        chrome.runtime.sendMessage({ type: MESSAGE_TYPES.FOUND_MISSING_ASSIGNMENTS, payload });
+    } else {
+        // Even if no missing assignments, send a report with the grade.
+        const payload = {
+            studentName: studentName,
+            gradeBook: cleanUrl,
+            currentGrade: currentGrade,
+            count: 0,
+            assignments: []
+        };
+        chrome.runtime.sendMessage({ type: MESSAGE_TYPES.FOUND_MISSING_ASSIGNMENTS, payload });
+        console.log(`No missing assignments found for ${studentName}, but sending grade report.`);
+    }
 
     if (isLooperRun) {
       chrome.runtime.sendMessage({ type: MESSAGE_TYPES.INSPECTION_RESULT, found: false, entry: null });
@@ -337,3 +345,4 @@ const STORAGE_KEYS = {
   }
 
 })();
+
