@@ -1,15 +1,18 @@
-// [2025-09-15]
-// Version: 9.4
+// [2025-09-24 17:36 PM]
+// Version: 9.5
 import { STORAGE_KEYS, CHECKER_MODES, ADVANCED_FILTER_REGEX, DEFAULT_SETTINGS, EXTENSION_STATES, MESSAGE_TYPES } from '../constants.js';
 
 let currentLoopIndex = 0;
 let isLooping = false;
 let masterListCache = [];
 let foundUrlCache = new Set();
+// activeTabs will now store { entry, timeoutId }
 let activeTabs = new Map();
 let maxConcurrentTabs = DEFAULT_SETTINGS[STORAGE_KEYS.CONCURRENT_TABS];
 let currentCheckerMode = DEFAULT_SETTINGS[STORAGE_KEYS.CHECKER_MODE];
 let onCompleteCallback = null; // To hold the callback function from background.js
+
+const TAB_TIMEOUT_MS = 20000; // 20 second timeout
 
 export function addToFoundUrlCache(url) {
   if (!url || foundUrlCache.has(url)) return;
@@ -42,6 +45,13 @@ export async function startLoop(options = {}) {
 
   isLooping = true;
   currentLoopIndex = 0;
+  
+  // Clear any lingering timeouts from a previous run
+  for (const tabInfo of activeTabs.values()) {
+    if (tabInfo.timeoutId) {
+      clearTimeout(tabInfo.timeoutId);
+    }
+  }
   activeTabs.clear();
 
   await loadSettings();
@@ -109,7 +119,10 @@ export function stopLoop() {
   
   chrome.storage.local.remove(STORAGE_KEYS.LOOP_STATUS);
   
-  for (const tabId of activeTabs.keys()) {
+  for (const [tabId, tabInfo] of activeTabs.entries()) {
+    if (tabInfo.timeoutId) {
+      clearTimeout(tabInfo.timeoutId);
+    }
     chrome.tabs.remove(tabId).catch(e => {});
   }
   activeTabs.clear();
@@ -119,26 +132,29 @@ export function processNextInQueue(finishedTabId = null) {
   if (!isLooping) return;
 
   if (finishedTabId) {
+    const tabInfo = activeTabs.get(finishedTabId);
+    if (tabInfo && tabInfo.timeoutId) {
+      clearTimeout(tabInfo.timeoutId);
+    }
     activeTabs.delete(finishedTabId);
   }
 
   if (currentLoopIndex >= masterListCache.length && activeTabs.size === 0) {
     if (currentCheckerMode === CHECKER_MODES.MISSING) {
         console.log('Completed single run for Missing Assignments check.');
-        // Call the callback function directly instead of sending a message.
         if (onCompleteCallback) {
             onCompleteCallback();
-            onCompleteCallback = null; // Clear callback after use
+            onCompleteCallback = null;
         }
         return;
     } else { // SUBMISSION mode
         console.log('Looped through entire list. Starting over.');
-        startLoop({ force: true }); // Restart for continuous loop
+        startLoop({ force: true });
         return;
     }
   }
 
-  if (currentLoopIndex < masterListCache.length) {
+  if (currentLoopIndex < masterListCache.length && activeTabs.size < maxConcurrentTabs) {
     const entry = masterListCache[currentLoopIndex];
     currentLoopIndex++;
     
@@ -169,10 +185,24 @@ async function openTab(entry) {
     console.log(`Opening tab for index #${currentLoopIndex - 1}: ${entry.name}`);
     try {
         const tab = await chrome.tabs.create({ url: urlToOpen.href, active: false });
-        activeTabs.set(tab.id, entry);
+        
+        const timeoutId = setTimeout(() => {
+            const timeoutMessage = `Tab for ${entry.name} timed out after ${TAB_TIMEOUT_MS / 1000} seconds. Closing and continuing.`;
+            console.error(timeoutMessage);
+            chrome.runtime.sendMessage({
+              type: MESSAGE_TYPES.LOG_TO_PANEL,
+              level: 'error',
+              args: [timeoutMessage]
+            });
+
+            chrome.tabs.remove(tab.id).catch(e => {}); // Ignore errors if tab is already closed
+            processNextInQueue(tab.id);
+        }, TAB_TIMEOUT_MS);
+
+        activeTabs.set(tab.id, { entry, timeoutId });
+
     } catch (error) {
         console.error(`Failed to create tab for ${entry.name}: ${error.message}. Continuing.`);
         setTimeout(() => processNextInQueue(), 100);
     }
 }
-
