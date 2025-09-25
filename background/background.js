@@ -1,6 +1,6 @@
-// [2025-09-25 10:30 AM]
-// Version: 13.1
-import { startLoop, stopLoop, processNextInQueue, addToFoundUrlCache } from './looper.js';
+// [2025-09-25 13:28 PM]
+// Version: 13.3
+import { startLoop, stopLoop, processNextInQueue, addToFoundUrlCache, getActiveTabs } from './looper.js';
 import { STORAGE_KEYS, CHECKER_MODES, MESSAGE_TYPES, EXTENSION_STATES, CONNECTION_TYPES, SCHEDULED_ALARM_NAME } from '../constants.js';
 import { setupSchedule, runScheduledCheck } from './schedule.js';
 
@@ -191,6 +191,44 @@ chrome.storage.onChanged.addListener((changes) => {
   if (changes[STORAGE_KEYS.EXTENSION_STATE] || changes[STORAGE_KEYS.FOUND_ENTRIES]) {
     updateBadge();
   }
+});
+
+// --- Safety Net Listener for Network Errors ---
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    // Check if the tab has finished loading and its URL is not a Chrome internal page
+    if (changeInfo.status === 'complete' && tab.url && !tab.url.startsWith('chrome://')) {
+        const activeTabs = getActiveTabs(); // Get the active tabs map from the looper
+        if (activeTabs.has(tabId)) {
+            // Check for common network error titles
+            const errorTitles = [
+                "This site can’t be reached",
+                "No internet",
+                "err_connection_refused",
+                "err_connection_timed_out",
+				"Your connection was interrupted",
+                "Aw, Snap!"
+            ];
+
+            const isErrorPage = errorTitles.some(errorTitle => tab.title.toLowerCase().includes(errorTitle.toLowerCase()));
+
+            if (isErrorPage) {
+                const { entry } = activeTabs.get(tabId);
+                const errorMessage = `Network error for ${entry.name}: "${tab.title}". Closing tab and skipping.`;
+                console.warn(errorMessage);
+
+                // Log to the side panel console
+                chrome.runtime.sendMessage({
+                  type: MESSAGE_TYPES.LOG_TO_PANEL,
+                  level: 'warn',
+                  args: [errorMessage]
+                }).catch(e => console.error("Error sending log to panel:", e));
+
+                // Close the faulty tab and process the next in queue
+                await chrome.tabs.remove(tabId).catch(e => console.error(`Error removing faulty tab ${tabId}:`, e));
+                processNextInQueue(tabId);
+            }
+        }
+    }
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {

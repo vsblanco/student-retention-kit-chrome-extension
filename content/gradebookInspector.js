@@ -1,5 +1,5 @@
-// [2025-09-25 11:03 AM]
-// Version: 11.2
+// [2025-09-25 12:56 PM]
+// Version: 11.3
 // Note: This content script cannot use ES6 modules, so constants are redefined here.
 
 const CHECKER_MODES = {
@@ -142,7 +142,7 @@ const STORAGE_KEYS = {
   }
   
   /**
-   * Waits for the grade element to contain a numerical value.
+   * Waits for the grade element to contain a numerical value or "N/A".
    * @returns {Promise<number|string>} A promise that resolves with the parsed grade or rejects on timeout.
    */
   async function getCurrentGrade() {
@@ -158,6 +158,15 @@ const STORAGE_KEYS = {
               const finalGradeElement = document.querySelector(selector);
               if (finalGradeElement) {
                   const gradeText = finalGradeElement.textContent.trim();
+
+                  // Immediately resolve if the grade is explicitly "N/A"
+                  if (gradeText.toUpperCase() === 'N/A') {
+                      clearInterval(interval);
+                      console.log(`Success: Found grade element. Grade is: N/A`);
+                      resolve('N/A');
+                      return;
+                  }
+                  
                   const gradeValue = parseFloat(gradeText.replace('%', ''));
 
                   // Check if the parsed value is a valid number
@@ -173,7 +182,7 @@ const STORAGE_KEYS = {
               if (elapsedTime >= timeout) {
                   clearInterval(interval);
                   console.log(`Failure: Timed out after ${timeout}ms waiting for a valid grade.`);
-                  resolve('N/A'); // Resolve with N/A instead of rejecting
+                  resolve('N/A'); // Resolve with N/A as a fallback
               }
           }, intervalTime);
       });
@@ -361,4 +370,3 @@ const STORAGE_KEYS = {
   }
 
 })();
-

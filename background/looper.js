@@ -1,6 +1,10 @@
-// [2025-09-25 10:36 AM]
-// Version: 9.7
+// [2025-09-25 13:24 PM]
+// Version: 9.9
 import { STORAGE_KEYS, CHECKER_MODES, ADVANCED_FILTER_REGEX, DEFAULT_SETTINGS, EXTENSION_STATES, MESSAGE_TYPES } from '../constants.js';
+
+// --- Configuration for Testing ---
+// Set to true to make new tabs focused, false to open them in the background.
+const FOCUS_TABS_ON_CREATE = false;
 
 let currentLoopIndex = 0;
 let isLooping = false;
@@ -12,7 +16,11 @@ let maxConcurrentTabs = DEFAULT_SETTINGS[STORAGE_KEYS.CONCURRENT_TABS];
 let currentCheckerMode = DEFAULT_SETTINGS[STORAGE_KEYS.CHECKER_MODE];
 let onCompleteCallback = null; // To hold the callback function from background.js
 
-const TAB_TIMEOUT_MS = 200000; // 20 second timeout
+const TAB_TIMEOUT_MS = 600000; // 60 second timeout
+
+export function getActiveTabs() {
+    return activeTabs;
+}
 
 export function addToFoundUrlCache(url) {
   if (!url || foundUrlCache.has(url)) return;
@@ -185,7 +193,7 @@ async function openTab(entry) {
     
     console.log(`Opening tab for index #${currentLoopIndex - 1}: ${entry.name}`);
     try {
-        const tab = await chrome.tabs.create({ url: urlToOpen.href, active: true });
+        const tab = await chrome.tabs.create({ url: urlToOpen.href, active: FOCUS_TABS_ON_CREATE });
         
         const timeoutId = setTimeout(() => {
             const timeoutMessage = `Tab for ${entry.name} timed out after ${TAB_TIMEOUT_MS / 1000} seconds. Closing and continuing.`;
@@ -207,3 +215,4 @@ async function openTab(entry) {
         setTimeout(() => processNextInQueue(), 100);
     }
 }
+
