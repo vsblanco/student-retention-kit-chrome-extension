@@ -254,6 +254,16 @@ function handleFileImport(file) {
     const timeSpan = step1.querySelector('.step-time');
     const startTime = Date.now();
 
+    // Determine file type and appropriate reader method
+    const isCSV = file.name.toLowerCase().endsWith('.csv');
+    const isXLSX = file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls');
+
+    if (!isCSV && !isXLSX) {
+        alert("Unsupported file type. Please use .csv or .xlsx files.");
+        resetQueueUI();
+        return;
+    }
+
     const reader = new FileReader();
 
     reader.onload = function(e) {
@@ -261,12 +271,10 @@ function handleFileImport(file) {
         let students = [];
 
         try {
-            if (file.name.endsWith('.csv')) {
+            if (isCSV) {
                 students = parseCSV(content);
-            } else {
-                alert("Unsupported file type. Please use .csv.");
-                resetQueueUI();
-                return;
+            } else if (isXLSX) {
+                students = parseXLSX(content);
             }
 
             if(students.length === 0) {
@@ -274,8 +282,8 @@ function handleFileImport(file) {
             }
 
             const lastUpdated = new Date().toLocaleString();
-            
-            chrome.storage.local.set({ 
+
+            chrome.storage.local.set({
                 [STORAGE_KEYS.MASTER_ENTRIES]: students,
                 [STORAGE_KEYS.LAST_UPDATED]: lastUpdated
             }, () => {
@@ -283,7 +291,7 @@ function handleFileImport(file) {
                 step1.className = 'queue-item completed';
                 step1.querySelector('i').className = 'fas fa-check';
                 timeSpan.textContent = `${duration}s`;
-                
+
                 if(elements.lastUpdatedText) {
                     elements.lastUpdatedText.textContent = lastUpdated;
                 }
@@ -300,11 +308,16 @@ function handleFileImport(file) {
             step1.style.color = '#ef4444';
             timeSpan.textContent = 'Error: ' + error.message;
         }
-        
+
         elements.studentPopFile.value = '';
     };
 
-    reader.readAsText(file);
+    // Use appropriate FileReader method based on file type
+    if (isCSV) {
+        reader.readAsText(file);
+    } else if (isXLSX) {
+        reader.readAsArrayBuffer(file);
+    }
 }
 
 // --- SPECIAL JSON IMPORT LOGIC ---
@@ -683,6 +696,78 @@ function parseCSV(csvText) {
     }
 
     return students;
+}
+
+/**
+ * Parses an Excel (.xlsx) file into an array of student objects
+ * Uses the SheetJS library to read Excel workbooks
+ *
+ * @param {ArrayBuffer} arrayBuffer - The Excel file as an ArrayBuffer
+ * @returns {Array} Array of student objects matching CSV format
+ */
+function parseXLSX(arrayBuffer) {
+    try {
+        // Check if XLSX library is loaded
+        if (typeof XLSX === 'undefined') {
+            throw new Error('XLSX library not loaded. Please refresh the page.');
+        }
+
+        // Read the workbook from the array buffer
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+
+        // Get the first sheet
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+
+        // Convert sheet to JSON (array of arrays)
+        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
+
+        if (data.length < 2) {
+            return [];
+        }
+
+        // Convert array of arrays to CSV-like format for processing
+        const lines = data.map(row =>
+            row.map(cell => {
+                if (cell === null || cell === undefined) return '';
+                // Escape cells that contain commas or quotes
+                const cellStr = String(cell);
+                if (cellStr.includes(',') || cellStr.includes('"')) {
+                    return `"${cellStr.replace(/"/g, '""')}"`;
+                }
+                return cellStr;
+            }).join(',')
+        ).filter(line => line.trim() !== '');
+
+        // Find and parse header row
+        const headerInfo = findHeaderRow(lines, CSV_FIELD_ALIASES);
+        if (!headerInfo) {
+            return [];
+        }
+
+        const { rowIndex: headerRowIndex, headers } = headerInfo;
+        const columnIndices = mapHeaderIndices(headers, CSV_FIELD_ALIASES);
+
+        // Parse data rows
+        const students = [];
+        for (let i = headerRowIndex + 1; i < lines.length; i++) {
+            const rowData = parseCSVRow(lines[i]);
+
+            if (!rowData) continue;
+
+            const studentName = rowData[columnIndices.name];
+            if (!isValidStudentName(studentName)) continue;
+
+            const entry = createStudentEntry(rowData, columnIndices);
+            students.push(entry);
+        }
+
+        return students;
+
+    } catch (error) {
+        console.error('Error parsing XLSX:', error);
+        throw new Error(`Excel parsing failed: ${error.message}`);
+    }
 }
 
 function resetQueueUI() {

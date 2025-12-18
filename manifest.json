@@ -75,7 +75,8 @@
         "assets/pictures/pusher-icon.png",
         "assets/pictures/background.png",
         "icon.png",
-        "lib/pusher.min.js"
+        "lib/pusher.min.js",
+        "lib/xlsx.full.min.js"
       ],
       "matches": ["<all_urls>"]
     }
