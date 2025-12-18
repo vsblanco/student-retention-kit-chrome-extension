@@ -462,40 +462,58 @@ function preloadImage(url) {
 async function processStep2(students) {
     const step2 = document.getElementById('step2');
     const timeSpan = step2.querySelector('.step-time');
-    
+
     step2.className = 'queue-item active';
     step2.querySelector('i').className = 'fas fa-spinner';
-    
+
     const startTime = Date.now();
 
     try {
         console.log(`[Step 2] Pinging Canvas API: ${CANVAS_DOMAIN}`);
+        console.log(`[Step 2] Processing ${students.length} students in batches of 5`);
 
         const BATCH_SIZE = 5;
+        const BATCH_DELAY_MS = 250; // 250ms delay between batches to avoid rate limiting
+
         let processedCount = 0;
+        let cacheHits = 0;
+        let apiFetches = 0;
         let updatedStudents = [...students];
+
+        const totalBatches = Math.ceil(updatedStudents.length / BATCH_SIZE);
 
         for (let i = 0; i < updatedStudents.length; i += BATCH_SIZE) {
             const batch = updatedStudents.slice(i, i + BATCH_SIZE);
+            const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+
+            console.log(`[Step 2] Processing batch ${batchNumber}/${totalBatches} (students ${i + 1}-${Math.min(i + BATCH_SIZE, updatedStudents.length)})`);
+
             const promises = batch.map(student => fetchCanvasDetails(student));
-            
+
             const results = await Promise.all(promises);
-            
+
             results.forEach((updatedStudent, index) => {
                 updatedStudents[i + index] = updatedStudent;
             });
 
             processedCount += batch.length;
             timeSpan.textContent = `${Math.round((processedCount / updatedStudents.length) * 100)}%`;
+
+            // Add delay between batches (except after the last batch)
+            if (i + BATCH_SIZE < updatedStudents.length) {
+                await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+            }
         }
 
         await chrome.storage.local.set({ [STORAGE_KEYS.MASTER_ENTRIES]: updatedStudents });
-        
+
         const duration = ((Date.now() - startTime) / 1000).toFixed(1);
         step2.className = 'queue-item completed';
         step2.querySelector('i').className = 'fas fa-check';
         timeSpan.textContent = `${duration}s`;
-        
+
+        console.log(`[Step 2] ✓ Complete in ${duration}s - ${students.length} students processed`);
+
         renderMasterList(updatedStudents);
 
     } catch (error) {
@@ -518,17 +536,20 @@ async function fetchCanvasDetails(student) {
 
         if (cachedData) {
             // Use cached data
-            console.log(`Using cached data for student ${student.SyStudentId} (expires: ${cachedData.expiresAt})`);
+            console.log(`✓ Cache hit for ${student.name || student.SyStudentId}`);
             userData = cachedData.userData;
             courses = cachedData.courses;
         } else {
             // Fetch from Canvas API
-            console.log(`Fetching fresh data for student ${student.SyStudentId}`);
+            console.log(`→ Fetching fresh data for ${student.name || student.SyStudentId}`);
 
             const userUrl = `${CANVAS_DOMAIN}/api/v1/users/sis_user_id:${student.SyStudentId}`;
             const userResp = await fetch(userUrl, { headers: { 'Accept': 'application/json' } });
 
-            if (!userResp.ok) return student;
+            if (!userResp.ok) {
+                console.warn(`✗ Failed to fetch user data for ${student.SyStudentId}: ${userResp.status} ${userResp.statusText}`);
+                return student;
+            }
             userData = await userResp.json();
 
             const canvasUserId = userData.id;
@@ -539,12 +560,14 @@ async function fetchCanvasDetails(student) {
 
                 if (coursesResp.ok) {
                     courses = await coursesResp.json();
-
-                    // Cache the results
-                    await setCachedData(student.SyStudentId, userData, courses);
+                    console.log(`✓ Cached data for ${student.name || student.SyStudentId}`);
                 } else {
+                    console.warn(`✗ Failed to fetch courses for ${student.SyStudentId}: ${coursesResp.status} ${coursesResp.statusText}`);
                     courses = [];
                 }
+
+                // Cache the results (even if courses fetch failed, we have user data)
+                await setCachedData(student.SyStudentId, userData, courses);
             }
         }
 
@@ -611,7 +634,7 @@ async function fetchCanvasDetails(student) {
         return student;
 
     } catch (e) {
-        console.error('Error in fetchCanvasDetails:', e);
+        console.error(`✗ Error fetching Canvas details for ${student.SyStudentId}:`, e);
         return student;
     }
 }
