@@ -7,6 +7,12 @@ import {
     GENERIC_AVATAR_URL,
     CSV_FIELD_ALIASES
 } from '../constants.js';
+import {
+    getCachedData,
+    setCachedData,
+    getCacheStats,
+    clearAllCache
+} from '../canvasCache.js';
 
 // --- STATE MANAGEMENT ---
 let isScanning = false;
@@ -121,6 +127,10 @@ function cacheDomElements() {
     // Modals & Settings
     elements.versionModal = document.getElementById('versionModal');
     elements.closeVersionBtn = document.getElementById('closeVersionBtn');
+
+    // Cache Management
+    elements.cacheStatsText = document.getElementById('cacheStatsText');
+    elements.clearCacheBtn = document.getElementById('clearCacheBtn');
 }
 
 function initializeApp() {
@@ -154,6 +164,16 @@ function setupEventListeners() {
     window.addEventListener('click', (e) => {
         if (elements.versionModal && e.target === elements.versionModal) elements.versionModal.style.display = 'none';
     });
+
+    // Cache Management
+    if (elements.clearCacheBtn) {
+        elements.clearCacheBtn.addEventListener('click', async () => {
+            if (confirm('Are you sure you want to clear all cached Canvas API data? This will require fresh API calls on the next master list update.')) {
+                await clearAllCache();
+                updateCacheStats();
+            }
+        });
+    }
 
     if (elements.startBtn) elements.startBtn.addEventListener('click', toggleScanState);
     if (elements.clearListBtn) elements.clearListBtn.addEventListener('click', () => chrome.storage.local.set({ [STORAGE_KEYS.FOUND_ENTRIES]: [] }));
@@ -490,13 +510,46 @@ async function fetchCanvasDetails(student) {
     if (!student.SyStudentId) return student;
 
     try {
-        const userUrl = `${CANVAS_DOMAIN}/api/v1/users/sis_user_id:${student.SyStudentId}`;
-        const userResp = await fetch(userUrl, { headers: { 'Accept': 'application/json' } });
-        
-        if (!userResp.ok) return student;
-        const userData = await userResp.json();
-        
-        if (userData.name) student.name = userData.name; 
+        // Check cache first
+        const cachedData = await getCachedData(student.SyStudentId);
+
+        let userData;
+        let courses;
+
+        if (cachedData) {
+            // Use cached data
+            console.log(`Using cached data for student ${student.SyStudentId} (expires: ${cachedData.expiresAt})`);
+            userData = cachedData.userData;
+            courses = cachedData.courses;
+        } else {
+            // Fetch from Canvas API
+            console.log(`Fetching fresh data for student ${student.SyStudentId}`);
+
+            const userUrl = `${CANVAS_DOMAIN}/api/v1/users/sis_user_id:${student.SyStudentId}`;
+            const userResp = await fetch(userUrl, { headers: { 'Accept': 'application/json' } });
+
+            if (!userResp.ok) return student;
+            userData = await userResp.json();
+
+            const canvasUserId = userData.id;
+
+            if (canvasUserId) {
+                const coursesUrl = `${CANVAS_DOMAIN}/api/v1/users/${canvasUserId}/courses?include[]=enrollments&enrollment_state=active&per_page=100`;
+                const coursesResp = await fetch(coursesUrl, { headers: { 'Accept': 'application/json' } });
+
+                if (coursesResp.ok) {
+                    courses = await coursesResp.json();
+
+                    // Cache the results
+                    await setCachedData(student.SyStudentId, userData, courses);
+                } else {
+                    courses = [];
+                }
+            }
+        }
+
+        // Process userData
+        if (userData.name) student.name = userData.name;
         if (userData.sortable_name) student.sortable_name = userData.sortable_name;
 
         if (userData.avatar_url && userData.avatar_url !== GENERIC_AVATAR_URL) {
@@ -510,7 +563,7 @@ async function fetchCanvasDetails(student) {
             const today = new Date();
             const timeDiff = today - createdDate;
             const daysDiff = timeDiff / (1000 * 3600 * 24);
-            
+
             if (daysDiff < 60) {
                 student.isNew = true;
             }
@@ -518,51 +571,47 @@ async function fetchCanvasDetails(student) {
 
         const canvasUserId = userData.id;
 
-        if (canvasUserId) {
-            const coursesUrl = `${CANVAS_DOMAIN}/api/v1/users/${canvasUserId}/courses?include[]=enrollments&enrollment_state=active&per_page=100`;
-            const coursesResp = await fetch(coursesUrl, { headers: { 'Accept': 'application/json' } });
+        // Process courses
+        if (canvasUserId && courses && courses.length > 0) {
+            const now = new Date();
+            const validCourses = courses.filter(c => c.name && !c.name.toUpperCase().includes('CAPV'));
 
-            if (coursesResp.ok) {
-                const courses = await coursesResp.json();
-                
-                const now = new Date();
-                const validCourses = courses.filter(c => c.name && !c.name.toUpperCase().includes('CAPV'));
+            let activeCourse = null;
 
-                let activeCourse = null;
+            activeCourse = validCourses.find(c => {
+                if (!c.start_at || !c.end_at) return false;
+                const start = new Date(c.start_at);
+                const end = new Date(c.end_at);
+                return now >= start && now <= end;
+            });
 
-                activeCourse = validCourses.find(c => {
-                    if (!c.start_at || !c.end_at) return false;
-                    const start = new Date(c.start_at);
-                    const end = new Date(c.end_at);
-                    return now >= start && now <= end;
+            if (!activeCourse && validCourses.length > 0) {
+                validCourses.sort((a, b) => {
+                    const dateA = a.start_at ? new Date(a.start_at) : new Date(0);
+                    const dateB = b.start_at ? new Date(b.start_at) : new Date(0);
+                    return dateB - dateA;
                 });
+                activeCourse = validCourses[0];
+            }
 
-                if (!activeCourse && validCourses.length > 0) {
-                    validCourses.sort((a, b) => {
-                        const dateA = a.start_at ? new Date(a.start_at) : new Date(0);
-                        const dateB = b.start_at ? new Date(b.start_at) : new Date(0);
-                        return dateB - dateA;
-                    });
-                    activeCourse = validCourses[0];
-                }
+            if (activeCourse) {
+                student.url = `${CANVAS_DOMAIN}/courses/${activeCourse.id}/grades/${canvasUserId}`;
 
-                if (activeCourse) {
-                    student.url = `${CANVAS_DOMAIN}/courses/${activeCourse.id}/grades/${canvasUserId}`;
-                    
-                    if (activeCourse.enrollments && activeCourse.enrollments.length > 0) {
-                        const enrollment = activeCourse.enrollments.find(e => e.type === 'StudentEnrollment') || activeCourse.enrollments[0];
-                        if (enrollment && enrollment.grades && enrollment.grades.current_score) {
-                            student.grade = enrollment.grades.current_score + '%';
-                        }
+                if (activeCourse.enrollments && activeCourse.enrollments.length > 0) {
+                    const enrollment = activeCourse.enrollments.find(e => e.type === 'StudentEnrollment') || activeCourse.enrollments[0];
+                    if (enrollment && enrollment.grades && enrollment.grades.current_score) {
+                        student.grade = enrollment.grades.current_score + '%';
                     }
-                } else {
-                    student.url = `${CANVAS_DOMAIN}/users/${canvasUserId}/grades`;
                 }
+            } else {
+                student.url = `${CANVAS_DOMAIN}/users/${canvasUserId}/grades`;
             }
         }
+
         return student;
 
     } catch (e) {
+        console.error('Error in fetchCanvasDetails:', e);
         return student;
     }
 }
@@ -1129,12 +1178,17 @@ function renderMasterList(rawEntries) {
 function switchTab(targetId) {
     elements.tabs.forEach(t => t.classList.remove('active'));
     elements.contents.forEach(c => c.classList.remove('active'));
-    
+
     const targetContent = document.getElementById(targetId);
     if (targetContent) targetContent.classList.add('active');
-    
+
     const targetTab = document.querySelector(`.tab-button[data-tab="${targetId}"]`);
     if (targetTab) targetTab.classList.add('active');
+
+    // Update cache stats when settings tab is opened
+    if (targetId === 'settings') {
+        updateCacheStats();
+    }
 }
 
 function toggleScanState() {
@@ -1275,4 +1329,28 @@ function exportMasterListCSV() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+}
+
+/**
+ * Updates the cache statistics display in the settings tab
+ */
+async function updateCacheStats() {
+    if (!elements.cacheStatsText) return;
+
+    try {
+        const stats = await getCacheStats();
+
+        if (stats.totalEntries === 0) {
+            elements.cacheStatsText.textContent = 'No cached data';
+        } else {
+            const validText = stats.validEntries === 1 ? 'entry' : 'entries';
+            const expiredText = stats.expiredEntries > 0
+                ? ` (${stats.expiredEntries} expired)`
+                : '';
+            elements.cacheStatsText.textContent = `${stats.validEntries} valid ${validText}${expiredText}`;
+        }
+    } catch (error) {
+        console.error('Error updating cache stats:', error);
+        elements.cacheStatsText.textContent = 'Error loading stats';
+    }
 }
