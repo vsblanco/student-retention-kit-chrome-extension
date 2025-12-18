@@ -73,7 +73,8 @@ export const STORAGE_KEYS = {
     SCHEDULED_CHECK_ENABLED: 'scheduledCheckEnabled',
     SCHEDULED_CHECK_TIME: 'scheduledCheckTime',
     SCHEDULED_MASTER_LIST: 'scheduledMasterList',
-    INCLUDE_ALL_ASSIGNMENTS: 'includeAllAssignments'
+    INCLUDE_ALL_ASSIGNMENTS: 'includeAllAssignments',
+    CANVAS_API_CACHE: 'canvasApiCache'
 };
 
 /**
