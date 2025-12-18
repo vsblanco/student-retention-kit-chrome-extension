@@ -650,6 +650,32 @@
         cursor: move;
     }
 
+    /* Skip Button */
+    .skip-btn {
+        background: #6b7280;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 0.8em;
+        transition: all 0.2s;
+        flex-shrink: 0;
+    }
+
+    .skip-btn:hover {
+        background: #4b5563;
+        transform: scale(1.1);
+    }
+
+    .skip-btn:active {
+        transform: scale(0.95);
+    }
+
   </style>
 </head>
 <body>
@@ -658,7 +684,7 @@
     <div class="header">
       <div class="title-area">
         <h2>Student Retention Kit</h2>
-        <span id="versionText" title="Click to view Version History">Version 10.19</span>
+        <span id="versionText" title="Click to view Version History">Version 10.20</span>
       </div>
       <button id="headerSettingsBtn" class="icon-btn" title="Settings">
         <i class="fas fa-cog"></i>
@@ -740,14 +766,19 @@
         </div>
 
         <div id="upNextCard" class="setting-card" style="display:none; background: rgba(107, 114, 128, 0.1); border-left: 4px solid #6b7280; padding: 8px 12px; margin-bottom: 10px;">
-            <div style="display:flex; align-items:center; gap:10px; width: 100%;">
-                <span style="font-size:0.7em; font-weight:700; color:#6b7280; text-transform:uppercase; white-space:nowrap;">
-                    <i class="fas fa-forward"></i> Up Next
-                </span>
-                <div style="height: 16px; width: 1px; background: rgba(107, 114, 128, 0.3);"></div>
-                <div id="upNextName" style="font-weight:500; font-size:0.85em; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    Student Name
+            <div style="display:flex; align-items:center; gap:10px; width: 100%; justify-content: space-between;">
+                <div style="display:flex; align-items:center; gap:10px; flex-grow:1; min-width:0;">
+                    <span style="font-size:0.7em; font-weight:700; color:#6b7280; text-transform:uppercase; white-space:nowrap;">
+                        <i class="fas fa-forward"></i> Up Next
+                    </span>
+                    <div style="height: 16px; width: 1px; background: rgba(107, 114, 128, 0.3);"></div>
+                    <div id="upNextName" style="font-weight:500; font-size:0.85em; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        Student Name
+                    </div>
                 </div>
+                <button id="skipStudentBtn" class="skip-btn" title="Skip to next student">
+                    <i class="fas fa-forward"></i>
+                </button>
             </div>
         </div>
 

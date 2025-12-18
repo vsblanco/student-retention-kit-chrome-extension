@@ -75,6 +75,7 @@ function cacheDomElements() {
     // Call Tab - Up Next Card (New v10.14)
     elements.upNextCard = document.getElementById('upNextCard');
     elements.upNextName = document.getElementById('upNextName');
+    elements.skipStudentBtn = document.getElementById('skipStudentBtn');
 
     // Call Tab - Student Card & Placeholder Logic
     const contactTab = document.getElementById('contact');
@@ -233,7 +234,16 @@ function setupEventListeners() {
     }
 
     if (elements.dialBtn) elements.dialBtn.addEventListener('click', () => callManager.toggleCallState());
-    
+
+    // Skip button for automation mode
+    if (elements.skipStudentBtn) {
+        elements.skipStudentBtn.addEventListener('click', () => {
+            if (callManager) {
+                callManager.skipToNext();
+            }
+        });
+    }
+
     const dispositionContainer = document.querySelector('.disposition-grid');
     if (dispositionContainer) {
         dispositionContainer.addEventListener('click', (e) => {

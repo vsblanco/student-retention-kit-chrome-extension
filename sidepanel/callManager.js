@@ -164,6 +164,38 @@ export default class CallManager {
     }
 
     /**
+     * Skips the current student and moves to the next one in automation
+     */
+    skipToNext() {
+        if (!this.automationMode) {
+            console.warn('Skip only available in automation mode');
+            return;
+        }
+
+        if (!this.isCallActive) {
+            console.warn('No active call to skip');
+            return;
+        }
+
+        // End current call
+        this.isCallActive = false;
+        this.stopCallTimer();
+
+        // Hide disposition section
+        if (this.elements.callDispositionSection) {
+            this.elements.callDispositionSection.style.display = 'none';
+        }
+
+        // Move to next student
+        this.currentAutomationIndex++;
+
+        // Brief delay before next call (for smooth transition)
+        setTimeout(() => {
+            this.callNextStudentInQueue();
+        }, 300);
+    }
+
+    /**
      * Ends the automation sequence
      */
     endAutomationSequence() {
