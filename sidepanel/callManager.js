@@ -1,5 +1,7 @@
-// [2025-12-18] Version 1.0 - Call Manager Module
+// [2025-12-18] Version 1.3 - Call Manager Module
 // Handles all call state management, automation, and Five9 integration
+// v1.2: Skip button marks students to skip over without removing from queue
+// v1.3: Dial button cancels automation and keeps only current student
 
 /**
  * CallManager class - Manages call state, timers, and automation sequences
@@ -13,6 +15,7 @@ export default class CallManager {
         this.debugMode = false;
         this.automationMode = false;
         this.currentAutomationIndex = 0;
+        this.skippedIndices = new Set(); // Track indices of students to skip
         this.uiCallbacks = uiCallbacks; // Callbacks for UI updates
     }
 
@@ -53,6 +56,14 @@ export default class CallManager {
             return;
         }
         // ----------------------
+
+        // --- CANCEL AUTOMATION MODE ---
+        // If in automation mode and call is active, cancel automation
+        if (this.automationMode && this.isCallActive) {
+            this.cancelAutomation();
+            return;
+        }
+        // --------------------------------------
 
         // --- CHECK FOR AUTOMATION MODE ---
         if (this.selectedQueue.length > 1 && !this.isCallActive) {
@@ -106,21 +117,41 @@ export default class CallManager {
 
         this.automationMode = true;
         this.currentAutomationIndex = 0;
+        this.skippedIndices.clear(); // Reset skipped indices
 
         // Start calling the first student
         this.callNextStudentInQueue();
     }
 
     /**
+     * Finds the next non-skipped student index starting from a given index
+     * @param {number} startIndex - Index to start searching from
+     * @returns {number} Next non-skipped index, or -1 if none found
+     */
+    findNextNonSkippedIndex(startIndex) {
+        for (let i = startIndex; i < this.selectedQueue.length; i++) {
+            if (!this.skippedIndices.has(i)) {
+                return i;
+            }
+        }
+        return -1; // No non-skipped students found
+    }
+
+    /**
      * Calls the next student in the automation queue
      */
     callNextStudentInQueue() {
-        if (this.currentAutomationIndex >= this.selectedQueue.length) {
-            // Automation complete
+        // Find next non-skipped student
+        const nextIndex = this.findNextNonSkippedIndex(this.currentAutomationIndex);
+
+        if (nextIndex === -1) {
+            // No more non-skipped students - automation complete
             this.endAutomationSequence();
             return;
         }
 
+        // Update current index to the next non-skipped student
+        this.currentAutomationIndex = nextIndex;
         const currentStudent = this.selectedQueue[this.currentAutomationIndex];
 
         // Update UI to show current student
@@ -151,15 +182,82 @@ export default class CallManager {
     updateUpNextCard() {
         if (!this.elements.upNextCard || !this.elements.upNextName) return;
 
-        const nextIndex = this.currentAutomationIndex + 1;
+        if (!this.automationMode) {
+            this.elements.upNextCard.style.display = 'none';
+            return;
+        }
 
-        if (this.automationMode && nextIndex < this.selectedQueue.length) {
-            // Show next student
+        // Find next non-skipped student
+        const nextIndex = this.findNextNonSkippedIndex(this.currentAutomationIndex + 1);
+
+        if (nextIndex !== -1) {
+            // Show next non-skipped student
             this.elements.upNextCard.style.display = 'block';
             this.elements.upNextName.textContent = this.selectedQueue[nextIndex].name;
         } else {
-            // No more students or not in automation
+            // No more non-skipped students
             this.elements.upNextCard.style.display = 'none';
+        }
+
+        // Update skip button state
+        this.updateSkipButtonState();
+    }
+
+    /**
+     * Skips the "Up Next" student (marks them to be skipped without calling)
+     */
+    skipToNext() {
+        if (!this.automationMode) {
+            console.warn('Skip only available in automation mode');
+            return;
+        }
+
+        if (!this.isCallActive) {
+            console.warn('No active call');
+            return;
+        }
+
+        // Find the next non-skipped student index
+        const upNextIndex = this.findNextNonSkippedIndex(this.currentAutomationIndex + 1);
+
+        // Check if there is a student to skip
+        if (upNextIndex === -1) {
+            console.warn('No up next student to skip');
+            return;
+        }
+
+        // Mark this student as skipped
+        this.skippedIndices.add(upNextIndex);
+        const skippedStudent = this.selectedQueue[upNextIndex];
+        console.log(`Marked student to skip: ${skippedStudent.name}`);
+
+        // Update the "Up Next" card to show the new next non-skipped student
+        this.updateUpNextCard();
+
+        // Update skip button state
+        this.updateSkipButtonState();
+    }
+
+    /**
+     * Updates skip button enabled/disabled state
+     */
+    updateSkipButtonState() {
+        if (!this.elements.skipStudentBtn) return;
+
+        // Check if there's a non-skipped student after the current one
+        const upNextIndex = this.findNextNonSkippedIndex(this.currentAutomationIndex + 1);
+        const hasUpNext = this.automationMode && upNextIndex !== -1;
+
+        if (hasUpNext) {
+            // Enable skip button
+            this.elements.skipStudentBtn.disabled = false;
+            this.elements.skipStudentBtn.style.opacity = '1';
+            this.elements.skipStudentBtn.style.cursor = 'pointer';
+        } else {
+            // Disable skip button
+            this.elements.skipStudentBtn.disabled = true;
+            this.elements.skipStudentBtn.style.opacity = '0.3';
+            this.elements.skipStudentBtn.style.cursor = 'not-allowed';
         }
     }
 
@@ -207,6 +305,56 @@ export default class CallManager {
 
         // Notify completion
         alert(`Automation complete! Called ${totalCalled} students.`);
+    }
+
+    /**
+     * Cancels the automation sequence and returns to normal calling mode
+     * Keeps only the current student being called
+     */
+    cancelAutomation() {
+        // Get the current student (the one currently being called)
+        const currentStudent = this.selectedQueue[this.currentAutomationIndex];
+
+        // End the current call
+        this.isCallActive = false;
+        this.stopCallTimer();
+
+        // Exit automation mode
+        this.automationMode = false;
+        this.currentAutomationIndex = 0;
+        this.skippedIndices.clear();
+
+        // Hide "Up Next" card
+        if (this.elements.upNextCard) {
+            this.elements.upNextCard.style.display = 'none';
+        }
+
+        // Reset call UI to regular mode
+        if (this.elements.dialBtn) {
+            this.elements.dialBtn.classList.remove('automation');
+            this.elements.dialBtn.innerHTML = '<i class="fas fa-phone"></i>';
+            this.elements.dialBtn.style.background = '#10b981';
+            this.elements.dialBtn.style.transform = 'rotate(0deg)';
+        }
+
+        if (this.elements.callStatusText) {
+            this.elements.callStatusText.innerHTML = '<span class="status-indicator ready"></span> Ready to Connect';
+        }
+
+        // Hide disposition section
+        if (this.elements.callDispositionSection) {
+            this.elements.callDispositionSection.style.display = 'none';
+        }
+
+        // Hide custom input area if it was open
+        if (this.elements.otherInputArea) {
+            this.elements.otherInputArea.style.display = 'none';
+        }
+
+        // Clear queue to only current student and update UI
+        if (currentStudent && this.uiCallbacks.cancelAutomation) {
+            this.uiCallbacks.cancelAutomation(currentStudent);
+        }
     }
 
     /**
