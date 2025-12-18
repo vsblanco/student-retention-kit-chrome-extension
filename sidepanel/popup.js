@@ -575,10 +575,10 @@ async function processStep2(students) {
 
     try {
         console.log(`[Step 2] Pinging Canvas API: ${CANVAS_DOMAIN}`);
-        console.log(`[Step 2] Processing ${students.length} students in batches of 5`);
+        console.log(`[Step 2] Processing ${students.length} students in batches of 20`);
 
-        const BATCH_SIZE = 5;
-        const BATCH_DELAY_MS = 250; // 250ms delay between batches to avoid rate limiting
+        const BATCH_SIZE = 20;
+        const BATCH_DELAY_MS = 100; // 100ms delay between batches to avoid rate limiting
 
         let processedCount = 0;
         let cacheHits = 0;
@@ -803,10 +803,10 @@ async function processStep3(students) {
 
     try {
         console.log(`[Step 3] Checking student gradebooks for missing assignments`);
-        console.log(`[Step 3] Processing ${students.length} students in batches of 5`);
+        console.log(`[Step 3] Processing ${students.length} students in batches of 20`);
 
-        const BATCH_SIZE = 5;
-        const BATCH_DELAY_MS = 250;
+        const BATCH_SIZE = 20;
+        const BATCH_DELAY_MS = 100;
 
         let processedCount = 0;
         let updatedStudents = [...students];
