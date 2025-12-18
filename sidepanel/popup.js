@@ -140,8 +140,13 @@ function cacheDomElements() {
 async function initializeApp() {
     setupEventListeners();
 
-    // Initialize call manager after DOM elements are cached
-    callManager = new CallManager(elements);
+    // Initialize call manager with UI callbacks
+    const uiCallbacks = {
+        updateCurrentStudent: (student) => {
+            setActiveStudent(student);
+        }
+    };
+    callManager = new CallManager(elements, uiCallbacks);
 
     await loadStorageData();
     setActiveStudent(null);
@@ -879,17 +884,22 @@ function setActiveStudent(rawEntry) {
     const contactTab = document.getElementById('contact');
     if (!contactTab) return;
 
-    // --- NEW: RESET AUTOMATION STYLES WHEN SWITCHING ---
-    if (elements.dialBtn) {
-        elements.dialBtn.classList.remove('automation');
-        elements.dialBtn.innerHTML = '<i class="fas fa-phone"></i>'; 
-    }
-    if (elements.callStatusText) {
-        elements.callStatusText.innerHTML = '<span class="status-indicator ready"></span> Ready to Connect';
-    }
-    // Hide Up Next Card in standard mode
-    if (elements.upNextCard) {
-        elements.upNextCard.style.display = 'none';
+    // --- RESET AUTOMATION STYLES WHEN SWITCHING (but not during active automation) ---
+    // Only reset if not in active automation mode
+    if (!callManager?.automationMode) {
+        if (elements.dialBtn) {
+            elements.dialBtn.classList.remove('automation');
+            elements.dialBtn.innerHTML = '<i class="fas fa-phone"></i>';
+        }
+        if (elements.callStatusText && !callManager?.debugMode) {
+            elements.callStatusText.innerHTML = '<span class="status-indicator" style="background:#f59e0b;"></span> Calls Disabled (Enable Debug Mode)';
+        } else if (elements.callStatusText) {
+            elements.callStatusText.innerHTML = '<span class="status-indicator ready"></span> Ready to Connect';
+        }
+        // Hide Up Next Card in standard mode
+        if (elements.upNextCard) {
+            elements.upNextCard.style.display = 'none';
+        }
     }
     // ---------------------------------------------------
 
@@ -988,17 +998,17 @@ function toggleMultiSelection(entry, liElement) {
     }
 }
 
-// --- UPDATED: Uses Gray Color Scheme + Up Next Card ---
+// --- UPDATED: Uses Gray Color Scheme for Automation Mode ---
 function setAutomationModeUI() {
     const contactTab = document.getElementById('contact');
     if (!contactTab) return;
-    
+
     // Ensure content is visible (hide placeholder)
     Array.from(contactTab.children).forEach(child => {
         if (child.id === 'contactPlaceholder') {
             child.style.display = 'none';
         } else {
-            child.style.display = ''; 
+            child.style.display = '';
         }
     });
 
@@ -1006,7 +1016,7 @@ function setAutomationModeUI() {
     if (elements.contactName) elements.contactName.textContent = "Automation Mode";
     if (elements.contactDetail) elements.contactDetail.textContent = `${selectedQueue.length} Students Selected`;
     if (elements.contactPhone) elements.contactPhone.textContent = "Multi-Dial Queue";
-    
+
     // Create/Update visual badge for count
     if (elements.contactAvatar) {
         elements.contactAvatar.textContent = selectedQueue.length;
@@ -1025,22 +1035,9 @@ function setAutomationModeUI() {
     if (elements.callStatusText) {
         elements.callStatusText.innerHTML = `<span class="status-indicator" style="background:#6b7280;"></span> Ready to Auto-Dial`;
     }
-    
+
     if (elements.contactCard) {
         elements.contactCard.style.borderLeftColor = '#6b7280';
-    }
-
-    // 4. Update 'Up Next' Card (New v10.14)
-    if (elements.upNextCard) {
-        if (selectedQueue.length > 1) {
-            elements.upNextCard.style.display = 'block';
-            // Show the name of the *next* person (index 1), assuming index 0 is active
-            if (elements.upNextName && selectedQueue[1]) {
-                elements.upNextName.textContent = selectedQueue[1].name;
-            }
-        } else {
-            elements.upNextCard.style.display = 'none';
-        }
     }
 }
 

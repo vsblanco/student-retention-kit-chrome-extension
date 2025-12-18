@@ -5,12 +5,15 @@
  * CallManager class - Manages call state, timers, and automation sequences
  */
 export default class CallManager {
-    constructor(elements) {
+    constructor(elements, uiCallbacks = {}) {
         this.elements = elements;
         this.isCallActive = false;
         this.callTimerInterval = null;
         this.selectedQueue = [];
         this.debugMode = false;
+        this.automationMode = false;
+        this.currentAutomationIndex = 0;
+        this.uiCallbacks = uiCallbacks; // Callbacks for UI updates
     }
 
     /**
@@ -94,17 +97,95 @@ export default class CallManager {
 
     /**
      * Starts the automation sequence for multiple students
-     * Currently a placeholder for future implementation
      */
     startAutomationSequence() {
-        alert(`Starting automation for ${this.selectedQueue.length} students...\n(Logic to be implemented)`);
-        // TODO: Implement automation logic
-        // Future implementation will:
-        // 1. Loop through selectedQueue
-        // 2. For each student, initiate call via Five9
-        // 3. Wait for disposition
-        // 4. Auto-advance to next student
-        // 5. Update UI with progress
+        if (this.selectedQueue.length === 0) {
+            alert('No students selected for automation.');
+            return;
+        }
+
+        this.automationMode = true;
+        this.currentAutomationIndex = 0;
+
+        // Start calling the first student
+        this.callNextStudentInQueue();
+    }
+
+    /**
+     * Calls the next student in the automation queue
+     */
+    callNextStudentInQueue() {
+        if (this.currentAutomationIndex >= this.selectedQueue.length) {
+            // Automation complete
+            this.endAutomationSequence();
+            return;
+        }
+
+        const currentStudent = this.selectedQueue[this.currentAutomationIndex];
+
+        // Update UI to show current student
+        if (this.uiCallbacks.updateCurrentStudent) {
+            this.uiCallbacks.updateCurrentStudent(currentStudent);
+        }
+
+        // Update "Up Next" card
+        this.updateUpNextCard();
+
+        // Start the call
+        this.isCallActive = true;
+        this.elements.dialBtn.style.background = '#ef4444';
+        this.elements.dialBtn.style.transform = 'rotate(135deg)';
+        this.elements.callStatusText.innerHTML = '<span class="status-indicator" style="background:#ef4444; animation: blink 1s infinite;"></span> Connected';
+
+        // Show Disposition Grid
+        if (this.elements.callDispositionSection) {
+            this.elements.callDispositionSection.style.display = 'flex';
+        }
+
+        this.startCallTimer();
+    }
+
+    /**
+     * Updates the "Up Next" card during automation
+     */
+    updateUpNextCard() {
+        if (!this.elements.upNextCard || !this.elements.upNextName) return;
+
+        const nextIndex = this.currentAutomationIndex + 1;
+
+        if (this.automationMode && nextIndex < this.selectedQueue.length) {
+            // Show next student
+            this.elements.upNextCard.style.display = 'block';
+            this.elements.upNextName.textContent = this.selectedQueue[nextIndex].name;
+        } else {
+            // No more students or not in automation
+            this.elements.upNextCard.style.display = 'none';
+        }
+    }
+
+    /**
+     * Ends the automation sequence
+     */
+    endAutomationSequence() {
+        this.automationMode = false;
+        this.currentAutomationIndex = 0;
+
+        // Hide "Up Next" card
+        if (this.elements.upNextCard) {
+            this.elements.upNextCard.style.display = 'none';
+        }
+
+        // Reset call UI
+        this.elements.dialBtn.style.background = '#6b7280';
+        this.elements.dialBtn.style.transform = 'rotate(0deg)';
+        this.elements.callStatusText.innerHTML = '<span class="status-indicator" style="background:#6b7280;"></span> Automation Complete';
+
+        // Hide disposition section
+        if (this.elements.callDispositionSection) {
+            this.elements.callDispositionSection.style.display = 'none';
+        }
+
+        alert(`Automation complete! Called ${this.selectedQueue.length} students.`);
     }
 
     /**
@@ -145,7 +226,28 @@ export default class CallManager {
         // - Associate with current student
         // - Track disposition history
 
-        this.toggleCallState(true); // Force end call
+        // End current call
+        this.isCallActive = false;
+        this.stopCallTimer();
+
+        // Check if in automation mode
+        if (this.automationMode) {
+            // Move to next student
+            this.currentAutomationIndex++;
+
+            // Hide disposition section temporarily
+            if (this.elements.callDispositionSection) {
+                this.elements.callDispositionSection.style.display = 'none';
+            }
+
+            // Brief delay before next call (for demo purposes)
+            setTimeout(() => {
+                this.callNextStudentInQueue();
+            }, 500);
+        } else {
+            // Single call mode - just end the call
+            this.toggleCallState(true);
+        }
     }
 
     /**

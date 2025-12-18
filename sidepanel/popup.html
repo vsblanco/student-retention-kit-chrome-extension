@@ -613,7 +613,7 @@
     <div class="header">
       <div class="title-area">
         <h2>Student Retention Kit</h2>
-        <span id="versionText" title="Click to view Version History">Version 10.17</span>
+        <span id="versionText" title="Click to view Version History">Version 10.18</span>
       </div>
       <button id="headerSettingsBtn" class="icon-btn" title="Settings">
         <i class="fas fa-cog"></i>
@@ -671,17 +671,6 @@
             <button class="btn-secondary" style="width:auto; font-size:0.75em; padding: 4px 8px;">Select</button>
         </div>
 
-        <div id="upNextCard" class="setting-card" style="display:none; background: rgba(107, 114, 128, 0.1); border-left: 4px solid #6b7280; padding: 8px 12px; margin-top: -8px; margin-bottom: 15px;">
-            <div style="display:flex; align-items:center; gap:10px; width: 100%;">
-                <span style="font-size:0.7em; font-weight:700; color:#6b7280; text-transform:uppercase; white-space:nowrap;">
-                    <i class="fas fa-forward"></i> Up Next
-                </span>
-                <div style="height: 16px; width: 1px; background: rgba(107, 114, 128, 0.3);"></div>
-                <div id="upNextName" style="font-weight:500; font-size:0.85em; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    Student Name
-                </div>
-            </div>
-        </div>
         <div class="call-interface-card">
             <div class="call-status-bar">
                 <span class="status-indicator ready"></span> Ready to Connect
@@ -702,6 +691,18 @@
                 </button>
                 
                 <button class="control-btn secondary-action speaker" title="Speaker"><i class="fas fa-volume-up"></i></button>
+            </div>
+        </div>
+
+        <div id="upNextCard" class="setting-card" style="display:none; background: rgba(107, 114, 128, 0.1); border-left: 4px solid #6b7280; padding: 8px 12px; margin-bottom: 10px;">
+            <div style="display:flex; align-items:center; gap:10px; width: 100%;">
+                <span style="font-size:0.7em; font-weight:700; color:#6b7280; text-transform:uppercase; white-space:nowrap;">
+                    <i class="fas fa-forward"></i> Up Next
+                </span>
+                <div style="height: 16px; width: 1px; background: rgba(107, 114, 128, 0.3);"></div>
+                <div id="upNextName" style="font-weight:500; font-size:0.85em; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    Student Name
+                </div>
             </div>
         </div>
 
