@@ -144,6 +144,25 @@ async function initializeApp() {
     const uiCallbacks = {
         updateCurrentStudent: (student) => {
             setActiveStudent(student);
+        },
+        finalizeAutomation: (lastStudent) => {
+            // Reset to single-student mode with the last student
+            selectedQueue = [lastStudent];
+            callManager.updateQueue(selectedQueue);
+
+            // Clear multi-selection visual indicators
+            document.querySelectorAll('.glass-list li').forEach(el => el.classList.remove('multi-selected'));
+
+            // Find and highlight the last student in the list
+            const listItems = document.querySelectorAll('.glass-list li.expandable');
+            listItems.forEach(li => {
+                const name = li.getAttribute('data-name');
+                if (name === lastStudent.name) {
+                    li.classList.add('multi-selected');
+                }
+            });
+
+            setActiveStudent(lastStudent);
         }
     };
     callManager = new CallManager(elements, uiCallbacks);

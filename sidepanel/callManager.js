@@ -167,6 +167,9 @@ export default class CallManager {
      * Ends the automation sequence
      */
     endAutomationSequence() {
+        const totalCalled = this.selectedQueue.length;
+        const lastStudent = this.selectedQueue[this.selectedQueue.length - 1];
+
         this.automationMode = false;
         this.currentAutomationIndex = 0;
 
@@ -175,17 +178,35 @@ export default class CallManager {
             this.elements.upNextCard.style.display = 'none';
         }
 
-        // Reset call UI
-        this.elements.dialBtn.style.background = '#6b7280';
-        this.elements.dialBtn.style.transform = 'rotate(0deg)';
-        this.elements.callStatusText.innerHTML = '<span class="status-indicator" style="background:#6b7280;"></span> Automation Complete';
+        // Reset call UI to regular mode
+        if (this.elements.dialBtn) {
+            this.elements.dialBtn.classList.remove('automation');
+            this.elements.dialBtn.innerHTML = '<i class="fas fa-phone"></i>';
+            this.elements.dialBtn.style.background = '#10b981';
+            this.elements.dialBtn.style.transform = 'rotate(0deg)';
+        }
+
+        if (this.elements.callStatusText) {
+            this.elements.callStatusText.innerHTML = '<span class="status-indicator ready"></span> Ready to Connect';
+        }
 
         // Hide disposition section
         if (this.elements.callDispositionSection) {
             this.elements.callDispositionSection.style.display = 'none';
         }
 
-        alert(`Automation complete! Called ${this.selectedQueue.length} students.`);
+        // Update UI to show last student and reset to single-student mode
+        if (lastStudent) {
+            if (this.uiCallbacks.finalizeAutomation) {
+                this.uiCallbacks.finalizeAutomation(lastStudent);
+            } else if (this.uiCallbacks.updateCurrentStudent) {
+                // Fallback if finalizeAutomation not provided
+                this.uiCallbacks.updateCurrentStudent(lastStudent);
+            }
+        }
+
+        // Notify completion
+        alert(`Automation complete! Called ${totalCalled} students.`);
     }
 
     /**
