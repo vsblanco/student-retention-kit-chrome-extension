@@ -761,6 +761,13 @@ function analyzeMissingAssignments(submissions, userObject, studentName) {
         // Skip future assignments (assignments without due dates are included)
         if (dueDate && dueDate > now) return;
 
+        // Check if score indicates completion (e.g., "complete", "Complete", "COMPLETE")
+        const scoreStr = String(sub.score || sub.grade || '').toLowerCase();
+        const isComplete = scoreStr === 'complete';
+
+        // Skip assignments marked as complete - they're submitted even if score is 0 or null
+        if (isComplete) return;
+
         // Missing if: marked as missing OR unsubmitted + past due OR score is 0
         // NOTE: This matches the exact logic from background/looper.js analyzeMissingMode
         const isMissing = (sub.missing === true) ||
