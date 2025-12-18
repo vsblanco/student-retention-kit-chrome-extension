@@ -575,10 +575,10 @@ async function processStep2(students) {
 
     try {
         console.log(`[Step 2] Pinging Canvas API: ${CANVAS_DOMAIN}`);
-        console.log(`[Step 2] Processing ${students.length} students in batches of 5`);
+        console.log(`[Step 2] Processing ${students.length} students in batches of 20`);
 
-        const BATCH_SIZE = 5;
-        const BATCH_DELAY_MS = 250; // 250ms delay between batches to avoid rate limiting
+        const BATCH_SIZE = 20;
+        const BATCH_DELAY_MS = 100; // 100ms delay between batches to avoid rate limiting
 
         let processedCount = 0;
         let cacheHits = 0;
@@ -621,10 +621,237 @@ async function processStep2(students) {
 
         renderMasterList(updatedStudents);
 
+        // --- TRIGGER STEP 3 AUTOMATICALLY ---
+        processStep3(updatedStudents);
+
     } catch (error) {
         console.error("[Step 2 Error]", error);
         step2.querySelector('i').className = 'fas fa-times';
         step2.style.color = '#ef4444';
+        timeSpan.textContent = 'Error';
+    }
+}
+
+// --- STEP 3: CHECK MISSING ASSIGNMENTS & GRADES ---
+
+function parseGradebookUrl(url) {
+    try {
+        const urlObj = new URL(url);
+        const regex = /courses\/(\d+)\/grades\/(\d+)/;
+        const match = urlObj.pathname.match(regex);
+        if (match) {
+            return {
+                origin: urlObj.origin,
+                courseId: match[1],
+                studentId: match[2]
+            };
+        }
+    } catch (e) {
+        console.warn('Invalid gradebook URL:', url);
+    }
+    return null;
+}
+
+async function fetchPaged(url, items = []) {
+    const headers = {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+    };
+
+    try {
+        const response = await fetch(url, { method: 'GET', credentials: 'include', headers });
+
+        if (!response.ok) {
+            if (items.length > 0) return items;
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const newItems = await response.json();
+        const allItems = items.concat(newItems);
+
+        const linkHeader = response.headers.get('Link');
+        const nextUrl = getNextPageUrl(linkHeader);
+
+        if (nextUrl) {
+            return fetchPaged(nextUrl, allItems);
+        }
+
+        return allItems;
+    } catch (e) {
+        console.warn('Fetch error:', e);
+        return items;
+    }
+}
+
+function getNextPageUrl(linkHeader) {
+    if (!linkHeader) return null;
+    const links = linkHeader.split(',');
+    const nextLink = links.find(link => link.includes('rel="next"'));
+    if (!nextLink) return null;
+    const match = nextLink.match(/<([^>]+)>/);
+    return match ? match[1] : null;
+}
+
+async function fetchMissingAssignments(student) {
+    if (!student.url) {
+        console.log(`[Step 3] ${student.name}: No gradebook URL, skipping`);
+        return { ...student, missingCount: 0, missingAssignments: [] };
+    }
+
+    const parsed = parseGradebookUrl(student.url);
+    if (!parsed) {
+        console.warn(`[Step 3] ${student.name}: Failed to parse gradebook URL: ${student.url}`);
+        return { ...student, missingCount: 0, missingAssignments: [] };
+    }
+
+    const { origin, courseId, studentId } = parsed;
+
+    try {
+        // Fetch submissions
+        const submissionsUrl = `${origin}/api/v1/courses/${courseId}/students/submissions?student_ids[]=${studentId}&include[]=assignment&per_page=100`;
+        const submissions = await fetchPaged(submissionsUrl);
+
+        // Fetch user enrollment data for current grade
+        const usersUrl = `${origin}/api/v1/courses/${courseId}/users?user_ids[]=${studentId}&include[]=enrollments&per_page=100`;
+        const users = await fetchPaged(usersUrl);
+        const userObject = users && users.length > 0 ? users[0] : null;
+
+        // Analyze for missing assignments
+        const result = analyzeMissingAssignments(submissions, userObject, student.name);
+
+        if (result.count > 0) {
+            console.log(`[Step 3] ${student.name}: Found ${result.count} missing assignment(s), Grade: ${result.currentGrade || 'N/A'}`);
+        }
+
+        return {
+            ...student,
+            missingCount: result.count,
+            missingAssignments: result.assignments,
+            currentGrade: result.currentGrade
+        };
+
+    } catch (e) {
+        console.error(`[Step 3] ${student.name}: Error fetching data:`, e);
+        return { ...student, missingCount: 0, missingAssignments: [] };
+    }
+}
+
+function analyzeMissingAssignments(submissions, userObject, studentName) {
+    const now = new Date();
+    const collectedAssignments = [];
+
+    let currentGrade = "";
+    if (userObject && userObject.enrollments) {
+        const enrollment = userObject.enrollments.find(e => e.type === 'StudentEnrollment') || userObject.enrollments[0];
+
+        if (enrollment && enrollment.grades) {
+            if (enrollment.grades.current_score != null) {
+                currentGrade = enrollment.grades.current_score;
+            } else if (enrollment.grades.final_score != null) {
+                currentGrade = enrollment.grades.final_score;
+            } else if (enrollment.grades.current_grade != null) {
+                currentGrade = String(enrollment.grades.current_grade).replace(/%/g, '');
+            }
+        }
+    }
+
+    submissions.forEach(sub => {
+        const dueDate = sub.cached_due_date ? new Date(sub.cached_due_date) : null;
+
+        // Skip future assignments (assignments without due dates are included)
+        if (dueDate && dueDate > now) return;
+
+        // Check if score indicates completion (e.g., "complete", "Complete", "COMPLETE")
+        const scoreStr = String(sub.score || sub.grade || '').toLowerCase();
+        const isComplete = scoreStr === 'complete';
+
+        // Skip assignments marked as complete - they're submitted even if score is 0 or null
+        if (isComplete) return;
+
+        // Missing if: marked as missing OR unsubmitted + past due OR score is 0
+        // NOTE: This matches the exact logic from background/looper.js analyzeMissingMode
+        const isMissing = (sub.missing === true) ||
+                          ((sub.workflow_state === 'unsubmitted' || sub.workflow_state === 'unsubmitted (ungraded)') && (dueDate && dueDate < now)) ||
+                          (sub.score === 0);
+
+        if (isMissing) {
+            collectedAssignments.push({
+                title: sub.assignment ? sub.assignment.name : 'Unknown Assignment',
+                submissionLink: sub.preview_url || '',
+                dueDate: sub.cached_due_date ? new Date(sub.cached_due_date).toLocaleDateString() : 'No Date',
+                score: sub.grade || (sub.score !== null ? sub.score : '-'),
+                workflow_state: sub.workflow_state // Add for debugging
+            });
+        }
+    });
+
+    return {
+        currentGrade: currentGrade,
+        count: collectedAssignments.length,
+        assignments: collectedAssignments
+    };
+}
+
+async function processStep3(students) {
+    const step3 = document.getElementById('step3');
+    const timeSpan = step3.querySelector('.step-time');
+
+    step3.className = 'queue-item active';
+    step3.querySelector('i').className = 'fas fa-spinner';
+
+    const startTime = Date.now();
+
+    try {
+        console.log(`[Step 3] Checking student gradebooks for missing assignments`);
+        console.log(`[Step 3] Processing ${students.length} students in batches of 20`);
+
+        const BATCH_SIZE = 20;
+        const BATCH_DELAY_MS = 100;
+
+        let processedCount = 0;
+        let updatedStudents = [...students];
+
+        const totalBatches = Math.ceil(updatedStudents.length / BATCH_SIZE);
+
+        for (let i = 0; i < updatedStudents.length; i += BATCH_SIZE) {
+            const batch = updatedStudents.slice(i, i + BATCH_SIZE);
+            const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+
+            console.log(`[Step 3] Processing batch ${batchNumber}/${totalBatches} (students ${i + 1}-${Math.min(i + BATCH_SIZE, updatedStudents.length)})`);
+
+            const promises = batch.map(student => fetchMissingAssignments(student));
+            const results = await Promise.all(promises);
+
+            results.forEach((updatedStudent, index) => {
+                updatedStudents[i + index] = updatedStudent;
+            });
+
+            processedCount += batch.length;
+            timeSpan.textContent = `${Math.round((processedCount / updatedStudents.length) * 100)}%`;
+
+            // Add delay between batches (except after the last batch)
+            if (i + BATCH_SIZE < updatedStudents.length) {
+                await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+            }
+        }
+
+        // Save updated students with missing assignment data
+        await chrome.storage.local.set({ [STORAGE_KEYS.MASTER_ENTRIES]: updatedStudents });
+
+        const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+        step3.className = 'queue-item completed';
+        step3.querySelector('i').className = 'fas fa-check';
+        timeSpan.textContent = `${duration}s`;
+
+        const totalMissing = updatedStudents.reduce((sum, s) => sum + (s.missingCount || 0), 0);
+        console.log(`[Step 3] ✓ Complete in ${duration}s - Found ${totalMissing} total missing assignments`);
+
+        renderMasterList(updatedStudents);
+
+    } catch (error) {
+        console.error("[Step 3 Error]", error);
+        step3.querySelector('i').className = 'fas fa-times';
+        step3.style.color = '#ef4444';
         timeSpan.textContent = 'Error';
     }
 }
@@ -1234,6 +1461,22 @@ function renderMasterList(rawEntries) {
             newTagHtml = `<span style="background:#e0f2fe; color:#0369a1; font-size:0.7em; padding:2px 6px; border-radius:8px; margin-left:6px; font-weight:bold; border:1px solid #bae6fd;">New</span>`;
         }
 
+        // Build missing assignments details HTML
+        let missingDetailsHtml = '<li><em>No missing assignments found.</em></li>';
+        if (rawEntry.missingAssignments && rawEntry.missingAssignments.length > 0) {
+            missingDetailsHtml = rawEntry.missingAssignments.map(assignment => {
+                const linkHtml = assignment.submissionLink
+                    ? `<a href="${assignment.submissionLink}" target="_blank" style="color:#2563eb; text-decoration:none;">${assignment.title}</a>`
+                    : assignment.title;
+                return `<li style="margin-bottom:6px;">
+                    ${linkHtml}
+                    <div style="font-size:0.9em; color:#6b7280; margin-top:2px;">
+                        Due: ${assignment.dueDate} | Score: ${assignment.score}
+                    </div>
+                </li>`;
+            }).join('');
+        }
+
         li.innerHTML = `
             <div style="display: flex; align-items: center; width:100%;">
                 <div class="heatmap-indicator ${heatmapClass}"></div>
@@ -1250,7 +1493,7 @@ function renderMasterList(rawEntries) {
             </div>
             <div class="missing-details" style="display: none; margin-top: 10px; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 8px; cursor: default;">
                 <ul style="padding: 0; margin: 0; font-size: 0.85em; color: #4b5563; list-style-type: none;">
-                    <li><em>Details not loaded.</em></li>
+                    ${missingDetailsHtml}
                 </ul>
             </div>
         `;

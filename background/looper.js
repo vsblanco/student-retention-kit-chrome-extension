@@ -190,15 +190,22 @@ async function analyzeMissingMode(entry, submissions, userObject) {
 
         if (dueDate && dueDate > now) return;
 
-        const isMissing = (sub.missing === true) || 
-                          ((sub.workflow_state === 'unsubmitted' || sub.workflow_state === 'unsubmitted (ungraded)') && (dueDate && dueDate < now)) || 
+        // Check if score indicates completion (e.g., "complete", "Complete", "COMPLETE")
+        const scoreStr = String(sub.score || sub.grade || '').toLowerCase();
+        const isComplete = scoreStr === 'complete';
+
+        // Skip assignments marked as complete - they're submitted even if score is 0 or null
+        if (isComplete) return;
+
+        const isMissing = (sub.missing === true) ||
+                          ((sub.workflow_state === 'unsubmitted' || sub.workflow_state === 'unsubmitted (ungraded)') && (dueDate && dueDate < now)) ||
                           (sub.score === 0);
-        
+
         if (isMissing) {
             debugStats.foundMissing++;
             collectedAssignments.push({
                 title: sub.assignment ? sub.assignment.name : 'Unknown Assignment',
-                link: entry.url, 
+                link: entry.url,
                 submissionLink: sub.preview_url || entry.url,
                 dueDate: sub.cached_due_date ? new Date(sub.cached_due_date).toLocaleDateString() : 'No Date',
                 score: sub.grade || (sub.score !== null ? sub.score : '-'),
