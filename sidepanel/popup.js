@@ -138,6 +138,7 @@ function cacheDomElements() {
     elements.daysOutValue = document.getElementById('daysOutValue');
     elements.failingToggle = document.getElementById('failingToggle');
     elements.saveScanFilterBtn = document.getElementById('saveScanFilterBtn');
+    elements.studentCountValue = document.getElementById('studentCountValue');
 
     // Queue Modal
     elements.queueModal = document.getElementById('queueModal');
@@ -237,7 +238,12 @@ function setupEventListeners() {
     // Scan Filter Modal
     if (elements.scanFilterBtn) elements.scanFilterBtn.addEventListener('click', openScanFilterModal);
     if (elements.closeScanFilterBtn) elements.closeScanFilterBtn.addEventListener('click', closeScanFilterModal);
-    if (elements.failingToggle) elements.failingToggle.addEventListener('click', toggleFailingFilter);
+    if (elements.failingToggle) elements.failingToggle.addEventListener('click', () => {
+        toggleFailingFilter();
+        updateScanFilterCount();
+    });
+    if (elements.daysOutOperator) elements.daysOutOperator.addEventListener('change', updateScanFilterCount);
+    if (elements.daysOutValue) elements.daysOutValue.addEventListener('input', updateScanFilterCount);
     if (elements.saveScanFilterBtn) elements.saveScanFilterBtn.addEventListener('click', saveScanFilterSettings);
 
     // Queue Modal
@@ -1480,6 +1486,9 @@ async function openScanFilterModal() {
         }
     }
 
+    // Calculate and display initial count
+    await updateScanFilterCount();
+
     // Show modal
     elements.scanFilterModal.style.display = 'flex';
 }
@@ -1487,6 +1496,56 @@ async function openScanFilterModal() {
 function closeScanFilterModal() {
     if (!elements.scanFilterModal) return;
     elements.scanFilterModal.style.display = 'none';
+}
+
+async function updateScanFilterCount() {
+    if (!elements.daysOutOperator || !elements.daysOutValue || !elements.failingToggle || !elements.studentCountValue) return;
+
+    // Get current filter settings from UI
+    const operator = elements.daysOutOperator.value;
+    const value = parseInt(elements.daysOutValue.value, 10);
+    const includeFailing = elements.failingToggle.classList.contains('fa-toggle-on');
+
+    // Get master entries from storage
+    const data = await chrome.storage.local.get([STORAGE_KEYS.MASTER_ENTRIES]);
+    const masterEntries = data[STORAGE_KEYS.MASTER_ENTRIES] || [];
+
+    // Apply the same filter logic as looper.js
+    let filteredCount = 0;
+
+    masterEntries.forEach(entry => {
+        const daysout = entry.daysout;
+
+        // Check if student meets days out criteria
+        let meetsDaysOutCriteria = false;
+        if (daysout != null) {
+            switch (operator) {
+                case '>':  meetsDaysOutCriteria = daysout > value; break;
+                case '<':  meetsDaysOutCriteria = daysout < value; break;
+                case '>=': meetsDaysOutCriteria = daysout >= value; break;
+                case '<=': meetsDaysOutCriteria = daysout <= value; break;
+                case '=':  meetsDaysOutCriteria = daysout === value; break;
+                default:   meetsDaysOutCriteria = false;
+            }
+        }
+
+        // Check if student is failing (grade < 60)
+        let isFailing = false;
+        if (includeFailing && entry.grade != null) {
+            const grade = parseFloat(entry.grade);
+            if (!isNaN(grade) && grade < 60) {
+                isFailing = true;
+            }
+        }
+
+        // Include student if they meet days out criteria OR are failing (if toggle is enabled)
+        if (meetsDaysOutCriteria || isFailing) {
+            filteredCount++;
+        }
+    });
+
+    // Update the display
+    elements.studentCountValue.textContent = filteredCount;
 }
 
 function toggleFailingFilter() {
