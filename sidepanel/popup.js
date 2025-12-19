@@ -106,10 +106,9 @@ function cacheDomElements() {
             five9Indicator.id = 'five9ConnectionIndicator';
             five9Indicator.style.cssText = 'display:none; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:80px; height:100%; min-height:400px; color:#6b7280; text-align:center; padding-left:20px; padding-right:20px;';
             five9Indicator.innerHTML = `
-                <i class="fas fa-phone-slash" style="font-size:3em; margin-bottom:15px; opacity:0.4;"></i>
-                <span style="font-size:1.1em; font-weight:500; color:#374151;">Five9 Not Connected</span>
-                <span style="font-size:0.9em; margin-top:5px; color:#6b7280;">Please open Five9 in a browser tab<br>to enable live calling features.</span>
-                <a href="https://m365.cloud.microsoft/" target="_blank" style="margin-top:15px; padding:10px 20px; background:#6b7280; color:white; border-radius:8px; text-decoration:none; font-weight:500;">Open Five9 via SSO</a>
+                <i class="fas fa-spinner fa-spin" style="font-size:3em; margin-bottom:15px; opacity:0.4;"></i>
+                <span style="font-size:1.1em; font-weight:500; color:#374151;">Connecting to Five9...</span>
+                <span style="font-size:0.9em; margin-top:5px; color:#6b7280;">Attempting automatic SSO login in background</span>
             `;
             contactTab.insertBefore(five9Indicator, contactTab.firstChild);
         }
@@ -2143,6 +2142,45 @@ async function checkFive9Connection() {
 }
 
 /**
+ * Attempts to auto-connect to Five9 via background SSO
+ */
+async function autoConnectFive9() {
+    try {
+        console.log("🔄 Attempting background Five9 SSO connection...");
+
+        // Open Microsoft SSO in a hidden/background tab
+        const tab = await chrome.tabs.create({
+            url: 'https://m365.cloud.microsoft/',
+            active: false // Don't switch to this tab
+        });
+
+        // Monitor for Five9 tab opening (result of SSO redirect)
+        const checkForFive9 = setInterval(async () => {
+            const five9Tabs = await chrome.tabs.query({ url: "https://app-atl.five9.com/*" });
+
+            if (five9Tabs.length > 0) {
+                // Five9 opened successfully - close the Microsoft tab
+                clearInterval(checkForFive9);
+                try {
+                    await chrome.tabs.remove(tab.id);
+                    console.log("✅ Five9 SSO successful - Microsoft tab closed");
+                } catch (e) {
+                    // Tab might already be closed
+                }
+            }
+        }, 1000);
+
+        // Stop checking after 30 seconds
+        setTimeout(() => {
+            clearInterval(checkForFive9);
+        }, 30000);
+
+    } catch (error) {
+        console.error("❌ Auto-connect failed:", error);
+    }
+}
+
+/**
  * Updates the Five9 connection indicator visibility
  * Only shows indicator when:
  * - Debug mode is OFF (live mode requires Five9)
@@ -2163,6 +2201,12 @@ async function updateFive9ConnectionIndicator() {
     // 2. Five9 is NOT connected
     // 3. A student IS selected (otherwise "No Student Selected" placeholder shows)
     const shouldShowFive9Indicator = !isDebugMode && !isFive9Connected && hasStudentSelected;
+
+    // Auto-connect if needed (only once per session)
+    if (shouldShowFive9Indicator && !window.five9AutoConnectAttempted) {
+        window.five9AutoConnectAttempted = true;
+        autoConnectFive9();
+    }
 
     // Update visibility
     const contactTab = document.getElementById('contact');
