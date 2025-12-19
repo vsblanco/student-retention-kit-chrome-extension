@@ -153,13 +153,14 @@ export const CSV_FIELD_ALIASES = {
  */
 export const EXPORT_MASTER_LIST_COLUMNS = [
     { header: 'Student Name', field: 'name' },
+	{ header: 'SyStudentId', field: 'SyStudentId' },
+	{ header: 'Student Number', field: 'StudentNumber' },
+	{ header: 'Grade Book', field: 'url' },
     { header: 'Missing Assignments', field: 'missingCount' },
     { header: 'Days Out', field: 'daysout' },
     { header: 'Grade', field: 'grade', fallback: 'currentGrade' },
     { header: 'Phone', field: 'phone' },
-    { header: 'Student Number', field: 'StudentNumber' },
-    { header: 'SyStudentId', field: 'SyStudentId' },
-    { header: 'Gradebook URL', field: 'url' }
+    
 ];
 
 /**
@@ -169,11 +170,11 @@ export const EXPORT_MASTER_LIST_COLUMNS = [
  */
 export const EXPORT_MISSING_ASSIGNMENTS_COLUMNS = [
     { header: 'Student Name', field: 'student.name' },
+	{ header: 'Grade Book', field: 'student.url' },
+	{ header: 'Overall Grade', field: 'student.currentGrade', fallback: 'student.grade' },
     { header: 'Assignment Title', field: 'assignment.title' },
     { header: 'Due Date', field: 'assignment.dueDate' },
     { header: 'Score', field: 'assignment.score' },
-    { header: 'Overall Grade', field: 'student.currentGrade', fallback: 'student.grade' },
-    { header: 'Grade Book', field: 'student.url' },
     { header: 'Assignment Link', field: 'assignment.assignmentLink' },
     { header: 'Submission Link', field: 'assignment.submissionLink' }
 ];
