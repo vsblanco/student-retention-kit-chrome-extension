@@ -109,7 +109,7 @@ function cacheDomElements() {
                 <i class="fas fa-phone-slash" style="font-size:3em; margin-bottom:15px; opacity:0.4;"></i>
                 <span style="font-size:1.1em; font-weight:500; color:#374151;">Five9 Not Connected</span>
                 <span style="font-size:0.9em; margin-top:5px; color:#6b7280;">Please open Five9 in a browser tab<br>to enable live calling features.</span>
-                <a href="https://app-atl.five9.com/" target="_blank" style="margin-top:15px; padding:10px 20px; background:#6b7280; color:white; border-radius:8px; text-decoration:none; font-weight:500;">Open Five9</a>
+                <a href="https://m365.cloud.microsoft/" target="_blank" style="margin-top:15px; padding:10px 20px; background:#6b7280; color:white; border-radius:8px; text-decoration:none; font-weight:500;">Open Five9 via SSO</a>
             `;
             contactTab.insertBefore(five9Indicator, contactTab.firstChild);
         }
