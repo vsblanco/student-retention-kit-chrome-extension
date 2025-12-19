@@ -1,0 +1,59 @@
+{
+  "manifest_version": 3,
+  "name": "Contact Assist",
+  "version": "3.0",
+  "description": "Finds contact info, replaces phone numbers with names on Google Voice and other platforms, and provides quick actions in a side panel.",
+  "permissions": [
+    "storage",
+    "clipboardRead",
+    "clipboardWrite",
+    "offscreen",
+    "contextMenus",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "https://voice.google.com/*",
+    "https://*.powerplatform.com/",
+    "https://app-atl.five9.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://voice.google.com/*",
+        "https://app-atl.five9.com/*"
+      ],
+      "js": [
+        "content.js"
+      ]
+    }
+  ],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "Open Contact Assist",
+    "default_icon": {
+      "16": "icon.png",
+      "48": "icon.png",
+      "128": "icon.png"
+    }
+  },
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "dataverse.webp"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}
