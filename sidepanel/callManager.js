@@ -145,7 +145,7 @@ export default class CallManager {
      */
     startAutomationSequence() {
         if (this.selectedQueue.length === 0) {
-            alert('No students selected for automation.');
+            console.warn('No students selected for automation.');
             return;
         }
 
@@ -352,7 +352,7 @@ export default class CallManager {
         }
 
         // Notify completion
-        alert(`Automation complete! Called ${totalCalled} students.`);
+        console.log(`✅ Automation complete! Called ${totalCalled} students.`);
     }
 
     /**

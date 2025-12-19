@@ -104,12 +104,12 @@ function cacheDomElements() {
         if (!five9Indicator) {
             five9Indicator = document.createElement('div');
             five9Indicator.id = 'five9ConnectionIndicator';
-            five9Indicator.style.cssText = 'display:none; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:80px; height:100%; min-height:400px; color:#dc2626; text-align:center; padding-left:20px; padding-right:20px;';
+            five9Indicator.style.cssText = 'display:none; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:80px; height:100%; min-height:400px; color:#6b7280; text-align:center; padding-left:20px; padding-right:20px;';
             five9Indicator.innerHTML = `
-                <i class="fas fa-phone-slash" style="font-size:3em; margin-bottom:15px; opacity:0.5;"></i>
-                <span style="font-size:1.1em; font-weight:500;">Five9 Not Connected</span>
-                <span style="font-size:0.9em; margin-top:5px; color:#991b1b;">Please open Five9 in a browser tab<br>to enable live calling features.</span>
-                <a href="https://app-atl.five9.com/" target="_blank" style="margin-top:15px; padding:10px 20px; background:#dc2626; color:white; border-radius:8px; text-decoration:none; font-weight:500;">Open Five9</a>
+                <i class="fas fa-phone-slash" style="font-size:3em; margin-bottom:15px; opacity:0.4;"></i>
+                <span style="font-size:1.1em; font-weight:500; color:#374151;">Five9 Not Connected</span>
+                <span style="font-size:0.9em; margin-top:5px; color:#6b7280;">Please open Five9 in a browser tab<br>to enable live calling features.</span>
+                <a href="https://app-atl.five9.com/" target="_blank" style="margin-top:15px; padding:10px 20px; background:#6b7280; color:white; border-radius:8px; text-decoration:none; font-weight:500;">Open Five9</a>
             `;
             contactTab.insertBefore(five9Indicator, contactTab.firstChild);
         }
@@ -1223,10 +1223,9 @@ function setActiveStudent(rawEntry) {
             elements.dialBtn.classList.remove('automation');
             elements.dialBtn.innerHTML = '<i class="fas fa-phone"></i>';
         }
-        if (elements.callStatusText && !callManager?.debugMode) {
-            elements.callStatusText.innerHTML = '<span class="status-indicator" style="background:#f59e0b;"></span> Calls Disabled (Enable Debug Mode)';
-        } else if (elements.callStatusText) {
-            elements.callStatusText.innerHTML = '<span class="status-indicator ready"></span> Ready to Connect';
+        // Call status is managed by callManager.updateCallInterfaceState()
+        if (callManager) {
+            callManager.updateCallInterfaceState();
         }
         // Hide Up Next Card in standard mode
         if (elements.upNextCard) {
@@ -2239,8 +2238,6 @@ chrome.runtime.onMessage.addListener((message, sender) => {
             if (callManager && callManager.getCallActiveState()) {
                 callManager.toggleCallState(true); // Force end
             }
-            // Show error to user
-            alert(`Failed to initiate call: ${message.error}`);
         }
     }
 
@@ -2253,7 +2250,6 @@ chrome.runtime.onMessage.addListener((message, sender) => {
         } else {
             console.error("✗ Five9 hangup failed:", message.error);
             // Don't revert UI - user probably wants to try again
-            alert(`Failed to end call: ${message.error}`);
         }
     }
 });
