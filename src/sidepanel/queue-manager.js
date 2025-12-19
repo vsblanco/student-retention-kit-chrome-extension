@@ -1,0 +1,219 @@
+// Queue Manager - Handles multi-select queue operations
+import { setActiveStudent, setAutomationModeUI } from './student-renderer.js';
+import { switchTab } from './ui-manager.js';
+
+/**
+ * Queue Manager Class - Manages student queue operations
+ */
+export class QueueManager {
+    constructor(callManager) {
+        this.selectedQueue = [];
+        this.callManager = callManager;
+    }
+
+    /**
+     * Gets the current queue
+     */
+    getQueue() {
+        return this.selectedQueue;
+    }
+
+    /**
+     * Gets the queue length
+     */
+    getLength() {
+        return this.selectedQueue.length;
+    }
+
+    /**
+     * Toggles multi-selection for a student
+     * @param {Object} entry - Student data
+     * @param {HTMLElement} liElement - List item element
+     */
+    toggleMultiSelection(entry, liElement) {
+        const index = this.selectedQueue.findIndex(s => s.name === entry.name);
+
+        if (index > -1) {
+            // Deselect
+            this.selectedQueue.splice(index, 1);
+            liElement.classList.remove('multi-selected');
+        } else {
+            // Select
+            this.selectedQueue.push(entry);
+            liElement.classList.add('multi-selected');
+        }
+
+        // Update call manager's queue reference
+        if (this.callManager) {
+            this.callManager.updateQueue(this.selectedQueue);
+        }
+
+        // Update UI based on queue size
+        if (this.selectedQueue.length === 1) {
+            setActiveStudent(this.selectedQueue[0], this.callManager);
+        } else if (this.selectedQueue.length > 1) {
+            setAutomationModeUI(this.selectedQueue.length);
+        } else {
+            setActiveStudent(null, this.callManager);
+        }
+    }
+
+    /**
+     * Sets the queue to a single student (standard single select)
+     * @param {Object} entry - Student data
+     * @param {HTMLElement} liElement - List item element
+     */
+    setSingleStudent(entry, liElement) {
+        this.selectedQueue = [entry];
+
+        if (this.callManager) {
+            this.callManager.updateQueue(this.selectedQueue);
+        }
+
+        // Visually clear other rows
+        document.querySelectorAll('.glass-list li').forEach(el => el.classList.remove('multi-selected'));
+        liElement.classList.add('multi-selected');
+
+        setActiveStudent(entry, this.callManager);
+        switchTab('contact');
+    }
+
+    /**
+     * Handles student click with CTRL/CMD key detection
+     * @param {Object} entry - Student data
+     * @param {HTMLElement} liElement - List item element
+     * @param {Event} event - Click event
+     */
+    handleStudentClick(entry, liElement, event) {
+        if (event.ctrlKey || event.metaKey) {
+            this.toggleMultiSelection(entry, liElement);
+        } else {
+            this.setSingleStudent(entry, liElement);
+        }
+    }
+
+    /**
+     * Reorders the queue by moving an item from one index to another
+     * @param {number} fromIndex - Source index
+     * @param {number} toIndex - Destination index
+     */
+    reorderQueue(fromIndex, toIndex) {
+        const [movedStudent] = this.selectedQueue.splice(fromIndex, 1);
+        this.selectedQueue.splice(toIndex, 0, movedStudent);
+
+        if (this.callManager) {
+            this.callManager.updateQueue(this.selectedQueue);
+        }
+
+        if (this.selectedQueue.length > 1) {
+            setAutomationModeUI(this.selectedQueue.length);
+        }
+    }
+
+    /**
+     * Removes a student from the queue
+     * @param {number} index - Index to remove
+     */
+    removeFromQueue(index) {
+        this.selectedQueue.splice(index, 1);
+
+        if (this.callManager) {
+            this.callManager.updateQueue(this.selectedQueue);
+        }
+
+        this.updateMasterListSelection();
+
+        // Update UI based on remaining queue size
+        if (this.selectedQueue.length === 0) {
+            setActiveStudent(null, this.callManager);
+            return 'close'; // Signal to close modal
+        } else if (this.selectedQueue.length === 1) {
+            setActiveStudent(this.selectedQueue[0], this.callManager);
+            return 'close'; // Signal to close modal
+        } else {
+            setAutomationModeUI(this.selectedQueue.length);
+            return 'refresh'; // Signal to refresh modal
+        }
+    }
+
+    /**
+     * Updates the visual selection in the master list
+     */
+    updateMasterListSelection() {
+        // Clear all selections first
+        document.querySelectorAll('.glass-list li.expandable').forEach(el => {
+            el.classList.remove('multi-selected');
+        });
+
+        // Re-apply selections based on current queue
+        const listItems = document.querySelectorAll('.glass-list li.expandable');
+        listItems.forEach(li => {
+            const name = li.getAttribute('data-name');
+            const isInQueue = this.selectedQueue.some(s => s.name === name);
+            if (isInQueue) {
+                li.classList.add('multi-selected');
+            }
+        });
+    }
+
+    /**
+     * Clears the entire queue
+     */
+    clearQueue() {
+        this.selectedQueue = [];
+
+        if (this.callManager) {
+            this.callManager.updateQueue(this.selectedQueue);
+        }
+
+        this.updateMasterListSelection();
+        setActiveStudent(null, this.callManager);
+    }
+
+    /**
+     * Replaces the queue with a new array
+     * @param {Array} newQueue - New queue array
+     */
+    setQueue(newQueue) {
+        this.selectedQueue = newQueue;
+
+        if (this.callManager) {
+            this.callManager.updateQueue(this.selectedQueue);
+        }
+
+        this.updateMasterListSelection();
+
+        if (this.selectedQueue.length === 0) {
+            setActiveStudent(null, this.callManager);
+        } else if (this.selectedQueue.length === 1) {
+            setActiveStudent(this.selectedQueue[0], this.callManager);
+        } else {
+            setAutomationModeUI(this.selectedQueue.length);
+        }
+    }
+
+    /**
+     * Checks if a student is in the queue
+     * @param {string} studentName - Name of student to check
+     * @returns {boolean}
+     */
+    isInQueue(studentName) {
+        return this.selectedQueue.some(s => s.name === studentName);
+    }
+
+    /**
+     * Gets the current student (first in queue)
+     * @returns {Object|null}
+     */
+    getCurrentStudent() {
+        return this.selectedQueue.length > 0 ? this.selectedQueue[0] : null;
+    }
+
+    /**
+     * Gets the next student in queue
+     * @returns {Object|null}
+     */
+    getNextStudent() {
+        return this.selectedQueue.length > 1 ? this.selectedQueue[1] : null;
+    }
+}

@@ -69,7 +69,7 @@
     "default_title": "Open Submission Checker"
   },
   "side_panel": {
-    "default_path": "src/sidepanel/popup.html"
+    "default_path": "src/sidepanel/sidepanel.html"
   },
   "web_accessible_resources": [
     {
