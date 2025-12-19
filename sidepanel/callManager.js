@@ -470,8 +470,20 @@ export default class CallManager {
                 this.callNextStudentInQueue();
             }, 500);
         } else {
-            // Single call mode - just end the call
-            this.toggleCallState(true);
+            // Single call mode - update UI to end the call
+            this.elements.dialBtn.style.background = '#10b981';
+            this.elements.dialBtn.style.transform = 'rotate(0deg)';
+            this.elements.callStatusText.innerHTML = '<span class="status-indicator ready"></span> Ready to Connect';
+
+            // Hide Disposition Grid
+            if (this.elements.callDispositionSection) {
+                this.elements.callDispositionSection.style.display = 'none';
+            }
+
+            // Hide custom input area if it was open
+            if (this.elements.otherInputArea) {
+                this.elements.otherInputArea.style.display = 'none';
+            }
         }
     }
 
