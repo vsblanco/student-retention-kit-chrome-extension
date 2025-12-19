@@ -45,6 +45,22 @@ export default class CallManager {
     }
 
     /**
+     * Extracts phone number from student object
+     * @param {Object} student - Student object with phone property
+     * @returns {string} Phone number or "No Phone Listed"
+     */
+    getPhoneNumber(student) {
+        if (!student) return "No Phone Listed";
+
+        // Handle different possible property names
+        if (student.phone) return student.phone;
+        if (student.Phone) return student.Phone;
+        if (student.PrimaryPhone) return student.PrimaryPhone;
+
+        return "No Phone Listed";
+    }
+
+    /**
      * Toggles call state between active and inactive
      * Handles both single calls and automation mode
      * @param {boolean} forceEnd - Force end the call regardless of current state
@@ -77,6 +93,18 @@ export default class CallManager {
         if (forceEnd) this.isCallActive = false;
 
         if (this.isCallActive) {
+            // --- INITIATE FIVE9 CALL (SINGLE-STUDENT MODE) ---
+            const currentStudent = this.selectedQueue[0];
+            if (currentStudent) {
+                const phoneNumber = this.getPhoneNumber(currentStudent);
+                if (phoneNumber && phoneNumber !== "No Phone Listed") {
+                    this.initiateCall(phoneNumber); // Trigger Five9 API call
+                } else {
+                    console.warn("No valid phone number for current student");
+                }
+            }
+            // --------------------------------------------------
+
             this.elements.dialBtn.style.background = '#ef4444';
             this.elements.dialBtn.style.transform = 'rotate(135deg)';
             this.elements.callStatusText.innerHTML = '<span class="status-indicator" style="background:#ef4444; animation: blink 1s infinite;"></span> Connected';
@@ -88,6 +116,10 @@ export default class CallManager {
 
             this.startCallTimer();
         } else {
+            // --- HANGUP FIVE9 CALL ---
+            this.hangupCall(); // Trigger Five9 API hangup
+            // -------------------------
+
             this.elements.dialBtn.style.background = '#10b981';
             this.elements.dialBtn.style.transform = 'rotate(0deg)';
             this.elements.callStatusText.innerHTML = '<span class="status-indicator ready"></span> Ready to Connect';
@@ -161,6 +193,15 @@ export default class CallManager {
 
         // Update "Up Next" card
         this.updateUpNextCard();
+
+        // --- INITIATE FIVE9 CALL (AUTOMATION MODE) ---
+        const phoneNumber = this.getPhoneNumber(currentStudent);
+        if (phoneNumber && phoneNumber !== "No Phone Listed") {
+            this.initiateCall(phoneNumber); // Trigger Five9 API call
+        } else {
+            console.warn(`No valid phone number for student: ${currentStudent.name || 'Unknown'}`);
+        }
+        // ----------------------------------------------
 
         // Start the call
         this.isCallActive = true;
@@ -395,6 +436,10 @@ export default class CallManager {
         // - Associate with current student
         // - Track disposition history
 
+        // --- HANGUP FIVE9 CALL ---
+        this.hangupCall(); // Trigger Five9 API hangup
+        // -------------------------
+
         // End current call
         this.isCallActive = false;
         this.stopCallTimer();
@@ -430,13 +475,14 @@ export default class CallManager {
         }
 
         try {
-            // Send message to Five9 connector content script
-            const response = await chrome.runtime.sendMessage({
-                type: 'executeFive9Call',
+            // Send message to background.js (which will forward to Five9 content script)
+            chrome.runtime.sendMessage({
+                type: 'triggerFive9Call',
                 phoneNumber: phoneNumber
             });
 
-            return response;
+            // Note: Response will come via 'callStatus' message listener
+            return { success: true };
         } catch (error) {
             console.error("Error initiating call:", error);
             return { success: false, error: error.message };
@@ -449,11 +495,12 @@ export default class CallManager {
      */
     async hangupCall() {
         try {
-            const response = await chrome.runtime.sendMessage({
-                type: 'executeFive9Hangup'
+            chrome.runtime.sendMessage({
+                type: 'triggerFive9Hangup'
             });
 
-            return response;
+            // Note: Response will come via 'hangupStatus' message listener
+            return { success: true };
         } catch (error) {
             console.error("Error hanging up call:", error);
             return { success: false, error: error.message };

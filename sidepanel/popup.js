@@ -2094,3 +2094,42 @@ async function updateCacheStats() {
         elements.cacheStatsText.textContent = 'Error loading stats';
     }
 }
+
+// ==========================================
+// FIVE9 STATUS LISTENERS
+// ==========================================
+
+/**
+ * Listen for Five9 call status updates from background.js
+ */
+chrome.runtime.onMessage.addListener((message, sender) => {
+    // Handle Five9 call initiation status
+    if (message.type === 'callStatus') {
+        if (message.success) {
+            console.log("✓ Five9 call initiated successfully");
+            // Call UI is already updated by callManager.toggleCallState()
+            // This just confirms the API call succeeded
+        } else {
+            console.error("✗ Five9 call failed:", message.error);
+            // Revert call UI state if call failed
+            if (callManager && callManager.getCallActiveState()) {
+                callManager.toggleCallState(true); // Force end
+            }
+            // Show error to user
+            alert(`Failed to initiate call: ${message.error}`);
+        }
+    }
+
+    // Handle Five9 hangup status
+    if (message.type === 'hangupStatus') {
+        if (message.success) {
+            console.log("✓ Five9 call ended successfully");
+            // Call UI is already updated by callManager.toggleCallState()
+            // In automation mode, callManager.handleDisposition() moves to next student
+        } else {
+            console.error("✗ Five9 hangup failed:", message.error);
+            // Don't revert UI - user probably wants to try again
+            alert(`Failed to end call: ${message.error}`);
+        }
+    }
+});
