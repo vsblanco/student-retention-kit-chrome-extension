@@ -1,7 +1,7 @@
 // [2025-12-17 01:25 PM]
 // Version: 14.4 - Added Five9 Integration
 import { startLoop, stopLoop, addToFoundUrlCache } from './looper.js';
-import { STORAGE_KEYS, CHECKER_MODES, MESSAGE_TYPES, EXTENSION_STATES, CONNECTION_TYPES, SCHEDULED_ALARM_NAME } from '../constants.js';
+import { STORAGE_KEYS, CHECKER_MODES, MESSAGE_TYPES, EXTENSION_STATES, CONNECTION_TYPES, SCHEDULED_ALARM_NAME } from '../constants/index.js';
 import { setupSchedule, runScheduledCheck } from './schedule.js';
 
 let logBuffer = [];
@@ -357,7 +357,7 @@ async function addStudentToFoundList(entry) {
 
 // --- INJECTION LOGIC FOR EXCEL CONNECTOR ---
 
-const CONTENT_SCRIPT_FILE = "content/excel_connector.js";
+const CONTENT_SCRIPT_FILE = "src/content/excelConnector.js";
 
 // UPDATED PATTERNS: Added SharePoint
 const TARGET_URL_PATTERNS = [

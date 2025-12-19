@@ -1,6 +1,6 @@
 // [2025-09-16 15:39 PM]
 // Version: 1.2
-import { STORAGE_KEYS, CHECKER_MODES, EXTENSION_STATES, SCHEDULED_ALARM_NAME } from '../constants.js';
+import { STORAGE_KEYS, CHECKER_MODES, EXTENSION_STATES, SCHEDULED_ALARM_NAME } from '../constants/index.js';
 
 export async function setupSchedule() {
   const settings = await chrome.storage.local.get([

@@ -8,13 +8,13 @@ import {
     CSV_FIELD_ALIASES,
     EXPORT_MASTER_LIST_COLUMNS,
     EXPORT_MISSING_ASSIGNMENTS_COLUMNS
-} from '../constants.js';
+} from '../constants/index.js';
 import {
     getCachedData,
     setCachedData,
     getCacheStats,
     clearAllCache
-} from '../canvasCache.js';
+} from '../utils/canvasCache.js';
 import { hasDispositionCode } from '../constants/dispositions.js';
 import CallManager from './callManager.js';
 

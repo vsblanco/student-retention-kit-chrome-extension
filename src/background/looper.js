@@ -1,6 +1,6 @@
 // [2025-12-10 11:30 AM]
 // Version: 18.1
-import { STORAGE_KEYS, CHECKER_MODES, ADVANCED_FILTER_REGEX, DEFAULT_SETTINGS, EXTENSION_STATES, MESSAGE_TYPES } from '../constants.js';
+import { STORAGE_KEYS, CHECKER_MODES, ADVANCED_FILTER_REGEX, DEFAULT_SETTINGS, EXTENSION_STATES, MESSAGE_TYPES } from '../constants/index.js';
 
 let isLooping = false;
 let batchQueue = [];

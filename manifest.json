@@ -29,18 +29,18 @@
     "https://m365.cloud.microsoft/*"
   ],
   "background": {
-    "service_worker": "background/background.js",
+    "service_worker": "src/background/background.js",
     "type": "module"
   },
   "content_scripts": [
     {
       "matches": ["https://nuc.instructure.com/courses/*"],
-      "js": ["content/gradebookInspector.js"],
+      "js": ["src/content/canvasGradebookInspector.js"],
       "run_at": "document_idle"
     },
     {
       "matches": ["https://nuc.instructure.com/courses/*/grades/*"],
-      "js": ["content/gradebook_injector.js"],
+      "js": ["src/content/canvasGradebookInjector.js"],
       "run_at": "document_idle"
     },
     {
@@ -49,18 +49,18 @@
         "https://*.officeapps.live.com/*",
         "https://vsblanco.github.io/Student-Retention-Add-in/*"
       ],
-      "js": ["content/excel_connector.js"],
+      "js": ["src/content/excelConnector.js"],
       "run_at": "document_start",
       "all_frames": true
     },
     {
       "matches": ["https://app-atl.five9.com/*"],
-      "js": ["content/five9_connector.js"],
+      "js": ["src/content/five9Connector.js"],
       "run_at": "document_idle"
     },
     {
       "matches": ["https://m365.cloud.microsoft/*"],
-      "js": ["content/microsoft_sso_auto.js"],
+      "js": ["src/content/microsoftSSOAuto.js"],
       "run_at": "document_idle"
     }
   ],
@@ -69,20 +69,20 @@
     "default_title": "Open Submission Checker"
   },
   "side_panel": {
-    "default_path": "sidepanel/popup.html"
+    "default_path": "src/sidepanel/popup.html"
   },
   "web_accessible_resources": [
     {
       "resources": [
-        "README.md",
-        "sidepanel/liquid-glass.css",
+        "docs/README.md",
+        "src/sidepanel/liquid-glass.css",
         "assets/pictures/powericon.png",
         "assets/pictures/power-automate-icon.png",
         "assets/pictures/pusher-icon.png",
         "assets/pictures/background.png",
         "icon.png",
-        "lib/pusher.min.js",
-        "lib/xlsx.full.min.js"
+        "src/lib/pusher.min.js",
+        "src/lib/xlsx.full.min.js"
       ],
       "matches": ["<all_urls>"]
     }
