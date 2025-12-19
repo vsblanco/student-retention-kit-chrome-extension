@@ -445,7 +445,7 @@ export default class CallManager {
 
         // --- HANGUP FIVE9 CALL (ONLY IF DEBUG MODE OFF) ---
         if (!this.debugMode) {
-            this.hangupCall(); // Trigger Five9 API hangup
+            this.hangupCall(type); // Trigger Five9 API hangup with disposition type
         } else {
             console.log("📞 [DEMO MODE] Simulating hangup after disposition");
         }
@@ -502,12 +502,14 @@ export default class CallManager {
 
     /**
      * Hangs up the current Five9 call
+     * @param {string} dispositionType - The disposition type selected by the user
      * @returns {Promise<{success: boolean, error?: string}>}
      */
-    async hangupCall() {
+    async hangupCall(dispositionType = null) {
         try {
             chrome.runtime.sendMessage({
-                type: 'triggerFive9Hangup'
+                type: 'triggerFive9Hangup',
+                dispositionType: dispositionType
             });
 
             // Note: Response will come via 'hangupStatus' message listener

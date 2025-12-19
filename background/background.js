@@ -247,7 +247,10 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
               return;
           }
 
-          chrome.tabs.sendMessage(tabs[0].id, { type: 'executeFive9Hangup' }, (response) => {
+          chrome.tabs.sendMessage(tabs[0].id, {
+              type: 'executeFive9Hangup',
+              dispositionType: msg.dispositionType
+          }, (response) => {
               if (chrome.runtime.lastError) {
                   console.error("Five9 Hangup Error:", chrome.runtime.lastError.message);
                   chrome.runtime.sendMessage({ type: 'hangupStatus', success: false, error: "Five9 disconnected." });
