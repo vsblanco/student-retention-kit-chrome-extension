@@ -445,7 +445,7 @@ export default class CallManager {
 
         // --- HANGUP FIVE9 CALL (ONLY IF DEBUG MODE OFF) ---
         if (!this.debugMode) {
-            this.hangupCall(); // Trigger Five9 API hangup
+            this.hangupCall(type); // Trigger Five9 API hangup with disposition type
         } else {
             console.log("📞 [DEMO MODE] Simulating hangup after disposition");
         }
@@ -470,8 +470,20 @@ export default class CallManager {
                 this.callNextStudentInQueue();
             }, 500);
         } else {
-            // Single call mode - just end the call
-            this.toggleCallState(true);
+            // Single call mode - update UI to end the call
+            this.elements.dialBtn.style.background = '#10b981';
+            this.elements.dialBtn.style.transform = 'rotate(0deg)';
+            this.elements.callStatusText.innerHTML = '<span class="status-indicator ready"></span> Ready to Connect';
+
+            // Hide Disposition Grid
+            if (this.elements.callDispositionSection) {
+                this.elements.callDispositionSection.style.display = 'none';
+            }
+
+            // Hide custom input area if it was open
+            if (this.elements.otherInputArea) {
+                this.elements.otherInputArea.style.display = 'none';
+            }
         }
     }
 
@@ -502,12 +514,14 @@ export default class CallManager {
 
     /**
      * Hangs up the current Five9 call
+     * @param {string} dispositionType - The disposition type selected by the user
      * @returns {Promise<{success: boolean, error?: string}>}
      */
-    async hangupCall() {
+    async hangupCall(dispositionType = null) {
         try {
             chrome.runtime.sendMessage({
-                type: 'triggerFive9Hangup'
+                type: 'triggerFive9Hangup',
+                dispositionType: dispositionType
             });
 
             // Note: Response will come via 'hangupStatus' message listener

@@ -15,6 +15,7 @@ import {
     getCacheStats,
     clearAllCache
 } from '../canvasCache.js';
+import { hasDispositionCode } from '../constants/dispositions.js';
 import CallManager from './callManager.js';
 
 // --- STATE MANAGEMENT ---
@@ -311,9 +312,19 @@ function setupEventListeners() {
         dispositionContainer.addEventListener('click', (e) => {
             const btn = e.target.closest('.disposition-btn');
             if (!btn) return;
+
+            // Prevent clicking greyed-out buttons
+            if (btn.classList.contains('disabled')) {
+                console.warn('This disposition does not have a code set yet.');
+                return;
+            }
+
             if (btn.innerText.includes('Other')) elements.otherInputArea.style.display = 'block';
             else callManager.handleDisposition(btn.innerText.trim());
         });
+
+        // Initialize disposition button states (grey out buttons without codes)
+        initializeDispositionButtons();
     }
 
     if (elements.confirmNoteBtn) {
@@ -384,6 +395,37 @@ function setupEventListeners() {
     if (elements.masterSearch) elements.masterSearch.addEventListener('input', filterMasterList);
     if (elements.sortSelect) elements.sortSelect.addEventListener('change', sortMasterList);
     if (elements.downloadMasterBtn) elements.downloadMasterBtn.addEventListener('click', exportMasterListCSV);
+}
+
+/**
+ * Initializes disposition button states - greys out buttons without disposition codes
+ */
+function initializeDispositionButtons() {
+    const dispositionButtons = document.querySelectorAll('.disposition-btn');
+
+    dispositionButtons.forEach(btn => {
+        const buttonText = btn.innerText.trim();
+
+        // Skip "Other" button - it always has special handling
+        if (buttonText.includes('Other')) {
+            return;
+        }
+
+        // Check if this disposition has a code
+        if (!hasDispositionCode(buttonText)) {
+            // Grey out the button
+            btn.classList.add('disabled');
+            btn.style.opacity = '0.4';
+            btn.style.cursor = 'not-allowed';
+            btn.title = 'Disposition code not set - add to constants/dispositions.js';
+        } else {
+            // Ensure button is enabled (in case it was previously disabled)
+            btn.classList.remove('disabled');
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            btn.title = '';
+        }
+    });
 }
 
 // --- FILE IMPORT LOGIC (STEP 1) ---
