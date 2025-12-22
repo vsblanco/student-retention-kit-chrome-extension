@@ -183,7 +183,15 @@ export function renderFoundList(rawEntries) {
 
     if (!rawEntries || rawEntries.length === 0) {
         elements.foundList.innerHTML = '<li style="justify-content:center; color:gray;">No submissions found yet.</li>';
+        if (elements.clearListBtn) {
+            elements.clearListBtn.style.display = 'none';
+        }
         return;
+    }
+
+    // Show clear button when there are entries
+    if (elements.clearListBtn) {
+        elements.clearListBtn.style.display = 'block';
     }
 
     const entries = rawEntries.map(resolveStudentData);

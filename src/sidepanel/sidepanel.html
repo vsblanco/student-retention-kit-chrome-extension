@@ -730,11 +730,11 @@
 
       <div class="section">
         <input type="text" placeholder="Filter found submissions..." style="margin-bottom: 12px;">
-        
+
         <ul class="glass-list" id="foundList">
           </ul>
       </div>
-      <button class="btn-secondary" style="margin-top:10px; width:100%; flex-shrink:0;">Clear List</button>
+      <button id="clearFoundListBtn" class="btn-secondary" style="margin-top:10px; width:100%; flex-shrink:0; display:none;">Clear List</button>
     </div>
 
     <div id="contact" class="tab-content">
@@ -892,6 +892,10 @@
         <div class="setting-card">
             <span>Dark Mode</span>
             <i class="fas fa-toggle-off" style="color:gray; font-size:2.5em; cursor: pointer;"></i>
+        </div>
+        <div class="setting-card" style="cursor: pointer;" id="clearMasterListBtn">
+            <span>Clear Master List</span>
+            <i class="fas fa-trash-alt" style="color:#ef4444; font-size:1.2em;"></i>
         </div>
 
         <h3>Connections</h3>

@@ -161,6 +161,17 @@ function setupEventListeners() {
         elements.closeVersionBtn.addEventListener('click', closeVersionModal);
     }
 
+    if (elements.clearMasterListBtn) {
+        elements.clearMasterListBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear the master list? This cannot be undone.')) {
+                chrome.storage.local.set({
+                    [STORAGE_KEYS.MASTER_ENTRIES]: [],
+                    [STORAGE_KEYS.LAST_UPDATED]: null
+                });
+            }
+        });
+    }
+
     // Connections Modal
     if (elements.configureExcelBtn) {
         elements.configureExcelBtn.addEventListener('click', () => openConnectionsModal('excel'));

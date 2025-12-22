@@ -23,7 +23,7 @@ export function cacheDomElements() {
     elements.statusDot = document.getElementById('statusDot');
     elements.statusText = document.getElementById('statusText');
     elements.foundList = document.querySelector('#checker .glass-list');
-    elements.clearListBtn = document.querySelector('#checker .btn-secondary');
+    elements.clearListBtn = document.getElementById('clearFoundListBtn');
     elements.foundSearch = document.querySelector('#checker input[type="text"]');
 
     // Call Tab
@@ -108,6 +108,7 @@ export function cacheDomElements() {
     // Modals & Settings
     elements.versionModal = document.getElementById('versionModal');
     elements.closeVersionBtn = document.getElementById('closeVersionBtn');
+    elements.clearMasterListBtn = document.getElementById('clearMasterListBtn');
 
     // Scan Filter Modal
     elements.scanFilterModal = document.getElementById('scanFilterModal');
