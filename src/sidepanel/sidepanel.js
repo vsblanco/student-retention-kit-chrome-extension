@@ -14,7 +14,6 @@ import {
     updateDebugModeUI,
     updateEmbedHelperUI,
     updateHighlightColorUI,
-    updateAutoUpdateUI,
     blockTextSelection
 } from './ui-manager.js';
 
@@ -47,7 +46,10 @@ import {
     closeQueueModal,
     renderQueueModal,
     openVersionModal,
-    closeVersionModal
+    closeVersionModal,
+    openConnectionsModal,
+    closeConnectionsModal,
+    saveConnectionsSettings
 } from './modal-manager.js';
 
 import { QueueManager } from './queue-manager.js';
@@ -153,6 +155,23 @@ function setupEventListeners() {
         elements.closeVersionBtn.addEventListener('click', closeVersionModal);
     }
 
+    // Connections Modal
+    if (elements.configureExcelBtn) {
+        elements.configureExcelBtn.addEventListener('click', () => openConnectionsModal('excel'));
+    }
+
+    if (elements.configurePowerAutomateBtn) {
+        elements.configurePowerAutomateBtn.addEventListener('click', () => openConnectionsModal('powerAutomate'));
+    }
+
+    if (elements.closeConnectionsBtn) {
+        elements.closeConnectionsBtn.addEventListener('click', closeConnectionsModal);
+    }
+
+    if (elements.saveConnectionsBtn) {
+        elements.saveConnectionsBtn.addEventListener('click', saveConnectionsSettings);
+    }
+
     // Scan Filter Modal
     if (elements.scanFilterBtn) {
         elements.scanFilterBtn.addEventListener('click', openScanFilterModal);
@@ -239,11 +258,6 @@ function setupEventListeners() {
     // Highlight Color Picker
     if (elements.highlightColorPicker) {
         elements.highlightColorPicker.addEventListener('input', updateHighlightColor);
-    }
-
-    // Auto-Update Master List Dropdown
-    if (elements.autoUpdateSelect) {
-        elements.autoUpdateSelect.addEventListener('change', handleAutoUpdateChange);
     }
 
     // Checker Tab
@@ -486,10 +500,6 @@ async function loadStorageData() {
     // Load Highlight Color setting (default: #ffff00)
     highlightColor = data[STORAGE_KEYS.HIGHLIGHT_COLOR] || '#ffff00';
     updateHighlightColorUI(highlightColor);
-
-    // Load Auto-Update Master List setting (default: 'always')
-    const autoUpdateSetting = data[STORAGE_KEYS.AUTO_UPDATE_MASTER_LIST] || 'always';
-    updateAutoUpdateUI(autoUpdateSetting);
 }
 
 // Storage change listener
@@ -569,13 +579,4 @@ async function toggleEmbedHelper() {
 async function updateHighlightColor(event) {
     highlightColor = event.target.value;
     await chrome.storage.local.set({ [STORAGE_KEYS.HIGHLIGHT_COLOR]: highlightColor });
-}
-
-/**
- * Handles auto-update master list dropdown change
- */
-async function handleAutoUpdateChange(event) {
-    const newSetting = event.target.value;
-    await chrome.storage.local.set({ [STORAGE_KEYS.AUTO_UPDATE_MASTER_LIST]: newSetting });
-    console.log(`Auto-update master list setting changed to: ${newSetting}`);
 }
