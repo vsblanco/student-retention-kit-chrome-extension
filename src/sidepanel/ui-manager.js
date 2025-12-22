@@ -126,6 +126,17 @@ export function cacheDomElements() {
     elements.queueList = document.getElementById('queueList');
     elements.queueCount = document.getElementById('queueCount');
 
+    // Connections Modal
+    elements.connectionsModal = document.getElementById('connectionsModal');
+    elements.closeConnectionsBtn = document.getElementById('closeConnectionsBtn');
+    elements.configureExcelBtn = document.getElementById('configureExcelBtn');
+    elements.configurePowerAutomateBtn = document.getElementById('configurePowerAutomateBtn');
+    elements.connectionModalTitle = document.getElementById('connectionModalTitle');
+    elements.excelConfigContent = document.getElementById('excelConfigContent');
+    elements.powerAutomateConfigContent = document.getElementById('powerAutomateConfigContent');
+    elements.autoUpdateSelectModal = document.getElementById('autoUpdateSelectModal');
+    elements.saveConnectionsBtn = document.getElementById('saveConnectionsBtn');
+
     // Cache Management
     elements.cacheStatsText = document.getElementById('cacheStatsText');
     elements.clearCacheBtn = document.getElementById('clearCacheBtn');
@@ -136,7 +147,6 @@ export function cacheDomElements() {
     // Settings
     elements.embedHelperToggle = document.getElementById('embedHelperToggle');
     elements.highlightColorPicker = document.getElementById('highlightColorPicker');
-    elements.autoUpdateSelect = document.getElementById('autoUpdateSelect');
 }
 
 /**
@@ -231,15 +241,6 @@ export function updateEmbedHelperUI(isEnabled) {
 export function updateHighlightColorUI(color) {
     if (!elements.highlightColorPicker) return;
     elements.highlightColorPicker.value = color;
-}
-
-/**
- * Updates auto-update master list dropdown UI
- * @param {string} setting - The auto-update setting ('always', 'once-daily', or 'never')
- */
-export function updateAutoUpdateUI(setting) {
-    if (!elements.autoUpdateSelect) return;
-    elements.autoUpdateSelect.value = setting || 'always';
 }
 
 /**

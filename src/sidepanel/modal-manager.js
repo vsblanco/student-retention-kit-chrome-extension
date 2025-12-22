@@ -280,3 +280,70 @@ export function closeVersionModal() {
         elements.versionModal.style.display = 'none';
     }
 }
+
+/**
+ * Opens the connections modal for a specific connection type
+ * @param {string} connectionType - 'excel' or 'powerAutomate'
+ */
+export function openConnectionsModal(connectionType) {
+    if (!elements.connectionsModal) return;
+
+    // Show the modal
+    elements.connectionsModal.style.display = 'flex';
+
+    // Hide all configuration content
+    if (elements.excelConfigContent) {
+        elements.excelConfigContent.style.display = 'none';
+    }
+    if (elements.powerAutomateConfigContent) {
+        elements.powerAutomateConfigContent.style.display = 'none';
+    }
+
+    // Show the appropriate configuration content
+    if (connectionType === 'excel') {
+        if (elements.connectionModalTitle) {
+            elements.connectionModalTitle.textContent = 'Excel Add-in Settings';
+        }
+        if (elements.excelConfigContent) {
+            elements.excelConfigContent.style.display = 'block';
+        }
+    } else if (connectionType === 'powerAutomate') {
+        if (elements.connectionModalTitle) {
+            elements.connectionModalTitle.textContent = 'Power Automate Settings';
+        }
+        if (elements.powerAutomateConfigContent) {
+            elements.powerAutomateConfigContent.style.display = 'block';
+        }
+    }
+
+    // Load current auto-update setting into modal dropdown
+    chrome.storage.local.get(['autoUpdateMasterList'], (result) => {
+        const setting = result.autoUpdateMasterList || 'always';
+        if (elements.autoUpdateSelectModal) {
+            elements.autoUpdateSelectModal.value = setting;
+        }
+    });
+}
+
+/**
+ * Closes the connections modal
+ */
+export function closeConnectionsModal() {
+    if (elements.connectionsModal) {
+        elements.connectionsModal.style.display = 'none';
+    }
+}
+
+/**
+ * Saves connections settings from the modal
+ */
+export async function saveConnectionsSettings() {
+    if (elements.autoUpdateSelectModal) {
+        const newSetting = elements.autoUpdateSelectModal.value;
+        await chrome.storage.local.set({ autoUpdateMasterList: newSetting });
+        console.log(`Auto-update master list setting saved: ${newSetting}`);
+    }
+
+    // Close modal after saving
+    closeConnectionsModal();
+}

@@ -925,39 +925,32 @@
 
         <h3>Connections</h3>
         <div class="setting-card">
-            <div style="display:flex; align-items:center; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px; flex-grow:1;">
                 <i class="fas fa-file-excel" style="color:#217346; font-size: 1.2em;"></i>
-                <span>Excel Add-in</span>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-                <span id="excelStatusDot" style="display:inline-block; width:10px; height:10px; border-radius:50%; background-color:#ef4444;" title="Disconnected"></span>
-                <span id="excelStatusText" style="font-size:0.8em; color:var(--text-secondary);">Disconnected</span>
-            </div>
-        </div>
-        <div class="setting-card" style="flex-direction: column; align-items: stretch; gap: 8px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <i class="fas fa-sync-alt" style="color:var(--primary-color); font-size: 1.2em;"></i>
-                    <span>Automatic Master List Update</span>
+                <div style="flex-grow:1;">
+                    <div style="font-weight:500;">Excel Add-in</div>
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+                        <span id="excelStatusDot" style="display:inline-block; width:8px; height:8px; border-radius:50%; background-color:#ef4444;" title="Disconnected"></span>
+                        <span id="excelStatusText" style="font-size:0.8em; color:var(--text-secondary);">Disconnected</span>
+                    </div>
                 </div>
-                <select id="autoUpdateSelect" style="width:auto; padding:8px; font-size:0.9em; cursor:pointer;">
-                    <option value="always">Always</option>
-                    <option value="once-daily">Once a Day</option>
-                    <option value="never">Never</option>
-                </select>
             </div>
-            <div style="font-size:0.8em; color:var(--text-secondary);">
-                Control when the extension accepts master list updates from the Office Add-in.
-            </div>
+            <button id="configureExcelBtn" class="btn-secondary" style="width:auto; margin:0; padding: 8px 16px;">
+                <i class="fas fa-cog" style="margin-right:6px;"></i>Configure
+            </button>
         </div>
         <div class="setting-card">
-            <div style="display:flex; align-items:center; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px; flex-grow:1;">
                 <i class="fas fa-bolt" style="color:#f59e0b; font-size: 1.2em;"></i>
-                <span>Power Automate</span>
+                <div style="flex-grow:1;">
+                    <div style="font-weight:500;">Power Automate</div>
+                    <div style="font-size:0.8em; color:green; margin-top:4px;">Connected</div>
+                </div>
             </div>
-            <span style="font-size:0.8em; color:green;">Connected</span>
+            <button id="configurePowerAutomateBtn" class="btn-secondary" style="width:auto; margin:0; padding: 8px 16px;">
+                <i class="fas fa-cog" style="margin-right:6px;"></i>Configure
+            </button>
         </div>
-        <button class="btn-secondary" style="width:100%;">Configure Connections</button>
       </div>
     </div>
 
@@ -1045,7 +1038,7 @@
                 <h3>Version History</h3>
                 <button class="icon-btn" id="closeVersionBtn" title="Close"><i class="fas fa-times"></i></button>
             </div>
-            
+
             <ul class="glass-list">
                 <li>
                     <div>
@@ -1138,6 +1131,49 @@
             <div style="text-align:center; margin-top:15px; font-size:0.8em; color:#9ca3af;">
                 Student Retention Kit &copy; 2024
             </div>
+        </div>
+    </div>
+
+    <div id="connectionsModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="connectionModalTitle">Connection Settings</h3>
+                <button class="icon-btn" id="closeConnectionsBtn" title="Close"><i class="fas fa-times"></i></button>
+            </div>
+
+            <!-- Excel Add-in Configuration -->
+            <div id="excelConfigContent" style="display:none;">
+                <div style="margin-bottom: 20px;">
+                    <label style="font-size:0.95em; font-weight:500; color:var(--text-main); display:block; margin-bottom:12px;">
+                        <i class="fas fa-sync-alt" style="color:var(--primary-color);"></i> Automatic Master List Update
+                    </label>
+                    <select id="autoUpdateSelectModal" style="width:100%; padding:10px; font-size:0.95em; cursor:pointer;">
+                        <option value="always">Always</option>
+                        <option value="once-daily">Once a Day</option>
+                        <option value="never">Never</option>
+                    </select>
+                    <div style="font-size:0.8em; color:var(--text-secondary); margin-top:8px;">
+                        <strong>Always:</strong> Accepts all master list update requests from the Office Add-in.<br>
+                        <strong>Once a Day:</strong> Only accepts the first update request each day.<br>
+                        <strong>Never:</strong> Rejects all automatic update requests.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Power Automate Configuration -->
+            <div id="powerAutomateConfigContent" style="display:none;">
+                <div style="text-align:center; padding:40px 20px; color:var(--text-secondary);">
+                    <i class="fas fa-bolt" style="font-size:3em; margin-bottom:15px; opacity:0.3;"></i>
+                    <div style="font-size:1.1em; font-weight:500; color:var(--text-main); margin-bottom:10px;">
+                        Power Automate Configuration
+                    </div>
+                    <div style="font-size:0.9em;">
+                        Configuration options coming soon...
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-primary" id="saveConnectionsBtn">Save Settings</button>
         </div>
     </div>
 
