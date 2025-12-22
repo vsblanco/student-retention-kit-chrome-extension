@@ -132,6 +132,10 @@ export function cacheDomElements() {
 
     // Debug Mode Toggle
     elements.debugModeToggle = document.getElementById('debugModeToggle');
+
+    // Settings
+    elements.embedHelperToggle = document.getElementById('embedHelperToggle');
+    elements.highlightColorPicker = document.getElementById('highlightColorPicker');
 }
 
 /**
@@ -201,6 +205,31 @@ export function updateDebugModeUI(isDebugMode) {
         elements.debugModeToggle.className = 'fas fa-toggle-off';
         elements.debugModeToggle.style.color = 'gray';
     }
+}
+
+/**
+ * Updates embed helper toggle UI
+ * @param {boolean} isEnabled - Whether embed helper is enabled
+ */
+export function updateEmbedHelperUI(isEnabled) {
+    if (!elements.embedHelperToggle) return;
+
+    if (isEnabled) {
+        elements.embedHelperToggle.className = 'fas fa-toggle-on';
+        elements.embedHelperToggle.style.color = 'var(--primary-color)';
+    } else {
+        elements.embedHelperToggle.className = 'fas fa-toggle-off';
+        elements.embedHelperToggle.style.color = 'gray';
+    }
+}
+
+/**
+ * Updates highlight color picker UI
+ * @param {string} color - The highlight color (hex format)
+ */
+export function updateHighlightColorUI(color) {
+    if (!elements.highlightColorPicker) return;
+    elements.highlightColorPicker.value = color;
 }
 
 /**

@@ -12,6 +12,8 @@ import {
     updateTabBadge,
     updateButtonVisuals,
     updateDebugModeUI,
+    updateEmbedHelperUI,
+    updateHighlightColorUI,
     blockTextSelection
 } from './ui-manager.js';
 
@@ -61,6 +63,8 @@ let isScanning = false;
 let callManager;
 let queueManager;
 let isDebugMode = false;
+let embedHelperEnabled = true;
+let highlightColor = '#ffff00';
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -216,6 +220,16 @@ function setupEventListeners() {
     // Debug Mode Toggle
     if (elements.debugModeToggle) {
         elements.debugModeToggle.addEventListener('click', toggleDebugMode);
+    }
+
+    // Embed Helper Toggle
+    if (elements.embedHelperToggle) {
+        elements.embedHelperToggle.addEventListener('click', toggleEmbedHelper);
+    }
+
+    // Highlight Color Picker
+    if (elements.highlightColorPicker) {
+        elements.highlightColorPicker.addEventListener('input', updateHighlightColor);
     }
 
     // Checker Tab
@@ -423,7 +437,9 @@ async function loadStorageData() {
         STORAGE_KEYS.MASTER_ENTRIES,
         STORAGE_KEYS.LAST_UPDATED,
         STORAGE_KEYS.EXTENSION_STATE,
-        STORAGE_KEYS.DEBUG_MODE
+        STORAGE_KEYS.DEBUG_MODE,
+        STORAGE_KEYS.EMBED_IN_CANVAS,
+        STORAGE_KEYS.HIGHLIGHT_COLOR
     ]);
 
     const foundEntries = data[STORAGE_KEYS.FOUND_ENTRIES] || [];
@@ -445,6 +461,16 @@ async function loadStorageData() {
     if (callManager) {
         callManager.setDebugMode(isDebugMode);
     }
+
+    // Load Embed Helper setting (default: true)
+    embedHelperEnabled = data[STORAGE_KEYS.EMBED_IN_CANVAS] !== undefined
+        ? data[STORAGE_KEYS.EMBED_IN_CANVAS]
+        : true;
+    updateEmbedHelperUI(embedHelperEnabled);
+
+    // Load Highlight Color setting (default: #ffff00)
+    highlightColor = data[STORAGE_KEYS.HIGHLIGHT_COLOR] || '#ffff00';
+    updateHighlightColorUI(highlightColor);
 }
 
 // Storage change listener
@@ -507,4 +533,21 @@ async function updateCacheStats() {
         console.error('Error updating cache stats:', error);
         elements.cacheStatsText.textContent = 'Error loading stats';
     }
+}
+
+/**
+ * Toggles embed helper in Canvas
+ */
+async function toggleEmbedHelper() {
+    embedHelperEnabled = !embedHelperEnabled;
+    await chrome.storage.local.set({ [STORAGE_KEYS.EMBED_IN_CANVAS]: embedHelperEnabled });
+    updateEmbedHelperUI(embedHelperEnabled);
+}
+
+/**
+ * Updates highlight color setting
+ */
+async function updateHighlightColor(event) {
+    highlightColor = event.target.value;
+    await chrome.storage.local.set({ [STORAGE_KEYS.HIGHLIGHT_COLOR]: highlightColor });
 }
