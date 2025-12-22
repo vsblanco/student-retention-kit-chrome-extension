@@ -40,7 +40,10 @@ export const MESSAGE_TYPES = {
     TRIGGER_PUSHER: 'trigger-pusher',
     LOG_TO_PANEL: 'logToPanel',
     SHOW_MISSING_ASSIGNMENTS_REPORT: 'showMissingAssignmentsReport',
-    UPDATE_SCHEDULE: 'updateSchedule'
+    UPDATE_SCHEDULE: 'updateSchedule',
+    SRK_CONNECTOR_ACTIVE: 'SRK_CONNECTOR_ACTIVE',
+    SRK_CONNECTOR_HEARTBEAT: 'SRK_CONNECTOR_HEARTBEAT',
+    SRK_OFFICE_ADDIN_CONNECTED: 'SRK_OFFICE_ADDIN_CONNECTED'
 };
 
 /**
@@ -48,7 +51,8 @@ export const MESSAGE_TYPES = {
  */
 export const CONNECTION_TYPES = {
     POWER_AUTOMATE: 'power-automate',
-    PUSHER: 'pusher'
+    PUSHER: 'pusher',
+    EXCEL: 'excel'
 };
 
 /**

@@ -58,6 +58,11 @@ import {
     setupFive9StatusListeners
 } from './five9-integration.js';
 
+import {
+    startExcelConnectionMonitor,
+    stopExcelConnectionMonitor
+} from './excel-integration.js';
+
 // --- STATE MANAGEMENT ---
 let isScanning = false;
 let callManager;
@@ -108,6 +113,9 @@ async function initializeApp() {
 
     // Setup Five9 status listeners
     setupFive9StatusListeners(callManager);
+
+    // Start Excel connection monitoring
+    startExcelConnectionMonitor();
 }
 
 // --- EVENT LISTENERS ---
