@@ -141,8 +141,11 @@ export function cacheDomElements() {
     elements.autoUpdateSelectModal = document.getElementById('autoUpdateSelectModal');
     elements.powerAutomateUrlInput = document.getElementById('powerAutomateUrlInput');
     elements.powerAutomateStatusText = document.getElementById('powerAutomateStatusText');
+    elements.powerAutomateStatusDot = document.getElementById('powerAutomateStatusDot');
     elements.canvasStatusText = document.getElementById('canvasStatusText');
+    elements.canvasStatusDot = document.getElementById('canvasStatusDot');
     elements.five9StatusText = document.getElementById('five9StatusText');
+    elements.five9StatusDot = document.getElementById('five9StatusDot');
     elements.embedHelperToggleModal = document.getElementById('embedHelperToggleModal');
     elements.highlightColorPickerModal = document.getElementById('highlightColorPickerModal');
     elements.cacheStatsTextModal = document.getElementById('cacheStatsTextModal');

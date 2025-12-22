@@ -485,9 +485,17 @@ export function updatePowerAutomateStatus(url) {
     if (url && url.trim()) {
         elements.powerAutomateStatusText.textContent = 'Connected';
         elements.powerAutomateStatusText.style.color = 'green';
+        if (elements.powerAutomateStatusDot) {
+            elements.powerAutomateStatusDot.style.backgroundColor = '#10b981';
+            elements.powerAutomateStatusDot.title = 'Connected';
+        }
     } else {
         elements.powerAutomateStatusText.textContent = 'Not configured';
         elements.powerAutomateStatusText.style.color = 'var(--text-secondary)';
+        if (elements.powerAutomateStatusDot) {
+            elements.powerAutomateStatusDot.style.backgroundColor = '#9ca3af';
+            elements.powerAutomateStatusDot.title = 'Not configured';
+        }
     }
 }
 
@@ -508,15 +516,27 @@ export async function updateCanvasStatus() {
             // User is logged in
             elements.canvasStatusText.textContent = 'Connected';
             elements.canvasStatusText.style.color = 'green';
+            if (elements.canvasStatusDot) {
+                elements.canvasStatusDot.style.backgroundColor = '#10b981';
+                elements.canvasStatusDot.title = 'Connected';
+            }
         } else {
             // Not logged in or authentication failed
             elements.canvasStatusText.textContent = 'No user logged in';
             elements.canvasStatusText.style.color = 'var(--text-secondary)';
+            if (elements.canvasStatusDot) {
+                elements.canvasStatusDot.style.backgroundColor = '#9ca3af';
+                elements.canvasStatusDot.title = 'No user logged in';
+            }
         }
     } catch (error) {
         console.error('Error checking Canvas status:', error);
         elements.canvasStatusText.textContent = 'No user logged in';
         elements.canvasStatusText.style.color = 'var(--text-secondary)';
+        if (elements.canvasStatusDot) {
+            elements.canvasStatusDot.style.backgroundColor = '#9ca3af';
+            elements.canvasStatusDot.title = 'No user logged in';
+        }
     }
 }
 
@@ -554,14 +574,26 @@ export async function updateFive9Status() {
         if (isConnected) {
             elements.five9StatusText.textContent = 'Connected';
             elements.five9StatusText.style.color = 'green';
+            if (elements.five9StatusDot) {
+                elements.five9StatusDot.style.backgroundColor = '#10b981';
+                elements.five9StatusDot.title = 'Connected';
+            }
         } else {
             elements.five9StatusText.textContent = 'Not connected';
             elements.five9StatusText.style.color = 'var(--text-secondary)';
+            if (elements.five9StatusDot) {
+                elements.five9StatusDot.style.backgroundColor = '#9ca3af';
+                elements.five9StatusDot.title = 'Not connected';
+            }
         }
     } catch (error) {
         console.error('Error checking Five9 status:', error);
         elements.five9StatusText.textContent = 'Not connected';
         elements.five9StatusText.style.color = 'var(--text-secondary)';
+        if (elements.five9StatusDot) {
+            elements.five9StatusDot.style.backgroundColor = '#9ca3af';
+            elements.five9StatusDot.title = 'Not connected';
+        }
     }
 }
 
