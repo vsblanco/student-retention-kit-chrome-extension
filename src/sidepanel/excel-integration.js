@@ -40,6 +40,11 @@ export async function checkExcelConnectionStatus() {
         const hasExcelTab = await checkExcelTabOpen();
 
         if (!hasExcelTab) {
+            // Reset connection state when tabs close
+            if (lastOfficeAddinPing > 0) {
+                lastOfficeAddinPing = 0;
+                console.log('📊 Excel tab closed - resetting connection state');
+            }
             return 'disconnected';
         }
 
@@ -51,14 +56,13 @@ export async function checkExcelConnectionStatus() {
             return 'searching';
         }
 
-        const hasRecentAddinPing = (now - lastOfficeAddinPing) < ADDIN_TIMEOUT;
-
-        if (hasRecentAddinPing) {
-            // Office Add-in is actively communicating
+        // If we've ever received an add-in ping (and heartbeat is active), consider it connected
+        // Office Add-in typically pings once on load, not continuously
+        if (lastOfficeAddinPing > 0) {
             return 'connected';
         }
 
-        // Connector is active but Office Add-in hasn't pinged recently
+        // Connector is active but Office Add-in has never connected
         return 'searching';
 
     } catch (error) {
