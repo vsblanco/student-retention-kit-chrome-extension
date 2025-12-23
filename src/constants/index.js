@@ -165,16 +165,16 @@ export const CANVAS_DOMAIN = "https://nuc.instructure.com";
 export const GENERIC_AVATAR_URL = "https://nuc.instructure.com/images/messages/avatar-50.png";
 
 /**
- * CSV field aliases for flexible header matching during file imports.
- * Maps internal field names to acceptable column header variations.
+ * Field aliases for flexible field matching in file imports and incoming payloads.
+ * Maps internal field names to acceptable field name variations (handles different capitalizations and aliases).
  */
-export const CSV_FIELD_ALIASES = {
+export const FIELD_ALIASES = {
     name: ['student name', 'name', 'studentname', 'student'],
-    phone: ['primaryphone', 'phone', 'phone number', 'mobile', 'cell', 'cell phone', 'contact', 'telephone'],
+    phone: ['primaryphone', 'phone', 'phone number', 'mobile', 'cell', 'cell phone', 'contact', 'telephone', 'otherphone'],
     grade: ['grade', 'grade level', 'level'],
     StudentNumber: ['studentnumber', 'student id', 'sis id'],
-    SyStudentId: ['systudentid', 'student sis'],
-    daysOut: ['days out', 'dayssincepriorlda', 'days inactive', 'days']
+    SyStudentId: ['systudentid', 'student sis', 'studentid'],
+    daysOut: ['days out', 'dayssincepriorlda', 'days inactive', 'days', 'daysout']
 };
 
 /**
