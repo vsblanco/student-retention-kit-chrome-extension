@@ -88,7 +88,9 @@ export const STORAGE_KEYS = {
     // Master List Auto-Update Settings
     AUTO_UPDATE_MASTER_LIST: 'autoUpdateMasterList',
     // Power Automate Settings
-    POWER_AUTOMATE_URL: 'powerAutomateUrl'
+    POWER_AUTOMATE_URL: 'powerAutomateUrl',
+    // Excel Student Sync Settings
+    SYNC_ACTIVE_STUDENT: 'syncActiveStudent'
 };
 
 /**
@@ -108,7 +110,8 @@ export const DEFAULT_SETTINGS = {
     [STORAGE_KEYS.INCLUDE_ALL_ASSIGNMENTS]: false,
     [STORAGE_KEYS.SCAN_FILTER_DAYS_OUT]: '>=5',
     [STORAGE_KEYS.SCAN_FILTER_INCLUDE_FAILING]: false,
-    [STORAGE_KEYS.AUTO_UPDATE_MASTER_LIST]: 'always' // Options: 'always', 'once-daily', 'never'
+    [STORAGE_KEYS.AUTO_UPDATE_MASTER_LIST]: 'always', // Options: 'always', 'once-daily', 'never'
+    [STORAGE_KEYS.SYNC_ACTIVE_STUDENT]: true // Enable student sync from Excel add-in by default
 };
 
 /**

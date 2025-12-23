@@ -204,35 +204,45 @@ if (window.hasSRKConnectorRun) {
               return;
           }
 
-          // Transform all students from add-in format to extension format
-          const transformedStudents = data.students.map(student => ({
-              name: student.name || 'Unknown',
-              phone: student.phone || student.otherPhone || null,
-              SyStudentId: student.syStudentId || null,
-              // Set defaults for fields not provided by the Office add-in
-              grade: null,
-              StudentNumber: null,
-              daysout: 0,
-              missingCount: 0,
-              url: null,
-              assignments: []
-          }));
+          // Check if sync active student is enabled
+          chrome.storage.local.get(['syncActiveStudent'], (result) => {
+              const syncEnabled = result.syncActiveStudent !== undefined ? result.syncActiveStudent : true;
 
-          if (data.count === 1) {
-              console.log(`Setting active student: ${transformedStudents[0].name}`);
-          } else {
-              console.log(`Setting up automation mode with ${data.count} students`);
-          }
+              if (!syncEnabled) {
+                  console.log("%c Sync Active Student is disabled. Skipping student sync.", "color: orange; font-weight: bold");
+                  return;
+              }
 
-          // Send to extension (works for both single and multiple)
-          chrome.runtime.sendMessage({
-              type: "SRK_SELECTED_STUDENTS",
-              students: transformedStudents,
-              count: data.count,
-              timestamp: Date.now(),
-              sourceTimestamp: data.timestamp
-          }).catch(() => {
-              // Extension might not be ready, that's ok
+              // Transform all students from add-in format to extension format
+              const transformedStudents = data.students.map(student => ({
+                  name: student.name || 'Unknown',
+                  phone: student.phone || student.otherPhone || null,
+                  SyStudentId: student.syStudentId || null,
+                  // Set defaults for fields not provided by the Office add-in
+                  grade: null,
+                  StudentNumber: null,
+                  daysout: 0,
+                  missingCount: 0,
+                  url: null,
+                  assignments: []
+              }));
+
+              if (data.count === 1) {
+                  console.log(`Setting active student: ${transformedStudents[0].name}`);
+              } else {
+                  console.log(`Setting up automation mode with ${data.count} students`);
+              }
+
+              // Send to extension (works for both single and multiple)
+              chrome.runtime.sendMessage({
+                  type: "SRK_SELECTED_STUDENTS",
+                  students: transformedStudents,
+                  count: data.count,
+                  timestamp: Date.now(),
+                  sourceTimestamp: data.timestamp
+              }).catch(() => {
+                  // Extension might not be ready, that's ok
+              });
           });
 
       } catch (error) {

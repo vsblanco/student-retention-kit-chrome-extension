@@ -55,6 +55,7 @@ import {
     updateFive9Status,
     toggleEmbedHelperModal,
     toggleDebugModeModal,
+    toggleSyncActiveStudentModal,
     clearCacheFromModal
 } from './modal-manager.js';
 
@@ -209,6 +210,11 @@ function setupEventListeners() {
     // Five9 Modal Settings
     if (elements.debugModeToggleModal) {
         elements.debugModeToggleModal.addEventListener('click', toggleDebugModeModal);
+    }
+
+    // Excel Modal Settings
+    if (elements.syncActiveStudentToggleModal) {
+        elements.syncActiveStudentToggleModal.addEventListener('click', toggleSyncActiveStudentModal);
     }
 
     // Scan Filter Modal
