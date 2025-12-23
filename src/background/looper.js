@@ -247,11 +247,14 @@ async function analyzeSubmissionMode(entry, submissions) {
     // If using specific date and it's set, use that date instead of today
     if (useSpecificDate && specificDate) {
         now = new Date(specificDate);
+        console.log(`%c [LOOPER] Using specific date: ${specificDate} -> ${now}`, 'color: #FF5722; font-weight: bold;');
     }
 
     if (!keyword) {
         keyword = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).replace(',', '');
     }
+
+    console.log(`%c [LOOPER] Checking ${entry.name} - Keyword: "${keyword}" | Custom: ${isCustomKeyword} | Submissions: ${submissions.length}`, 'color: #00BCD4;');
 
     let found = false;
     let foundDetails = null;
@@ -260,7 +263,7 @@ async function analyzeSubmissionMode(entry, submissions) {
         if (sub.submitted_at) {
             const subDate = new Date(sub.submitted_at);
             const subDateStr = subDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).replace(',', '');
-            
+
             // FIX: If using default date (Today), use strict equality (===) to prevent "Dec 10" matching "Dec 1".
             // If using a custom keyword (e.g. "Dec"), allow .includes() for partial matching.
             let isMatch = false;
@@ -269,7 +272,9 @@ async function analyzeSubmissionMode(entry, submissions) {
             } else {
                 isMatch = subDateStr === keyword;
             }
-            
+
+            console.log(`  [SUB] "${subDateStr}" ${isCustomKeyword ? 'includes' : '==='} "${keyword}" = ${isMatch} | Assignment: ${sub.assignment?.name || 'Unknown'}`);
+
             if (isMatch) {
                 found = true;
 
