@@ -337,12 +337,15 @@ function prepareBatches(entries) {
 
 // NEW: Core Logic extracted to allow re-runs
 async function performLoop() {
+    console.log('%c [LOOPER] performLoop() called', 'background: #673AB7; color: white; font-weight: bold; padding: 4px;');
+
     // Reset state for new cycle
     currentLoopIndex = 0;
     processedCount = 0;
     activeRequests = 0;
 
     await loadSettings();
+    console.log(`[LOOPER] Settings loaded - Mode: ${currentCheckerMode}, Concurrent: ${maxConcurrentRequests}`);
 
     // 1. Fetch Fresh Data
     const data = await chrome.storage.local.get([
@@ -356,6 +359,8 @@ async function performLoop() {
     const foundEntries = data[STORAGE_KEYS.FOUND_ENTRIES] || [];
     const filterText = (data[STORAGE_KEYS.LOOPER_DAYS_OUT_FILTER] || 'all').trim().toLowerCase();
     const includeFailing = data[STORAGE_KEYS.SCAN_FILTER_INCLUDE_FAILING] || false;
+
+    console.log(`[LOOPER] Data loaded - Master: ${masterEntries.length} students, Found: ${foundEntries.length}, Filter: "${filterText}", IncludeFailing: ${includeFailing}`);
 
     // 2. Re-build Cache
     foundUrlCache = new Set(foundEntries.map(e => e.url).filter(Boolean));
@@ -425,16 +430,20 @@ async function performLoop() {
     }
 
     // 5. Build Batches
-    totalStudents = filteredList.length; 
+    totalStudents = filteredList.length;
     batchQueue = prepareBatches(filteredList);
-    console.log(`Prepared ${batchQueue.length} batches from ${totalStudents} students.`);
-    
+
+    console.log('%c ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color: #00BCD4;');
+    console.log(`%c [LOOPER] Prepared ${batchQueue.length} batches from ${totalStudents} students`, 'background: #00BCD4; color: white; font-weight: bold; padding: 4px;');
+    console.log('%c ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color: #00BCD4;');
+
     // Update UI immediately
-    chrome.storage.local.set({ 
-        [STORAGE_KEYS.LOOP_STATUS]: { current: 0, total: totalStudents } 
+    chrome.storage.local.set({
+        [STORAGE_KEYS.LOOP_STATUS]: { current: 0, total: totalStudents }
     });
 
     // 6. Launch
+    console.log(`[LOOPER] Launching ${maxConcurrentRequests} concurrent workers...`);
     for (let i = 0; i < maxConcurrentRequests; i++) {
         next();
     }
@@ -497,23 +506,38 @@ export function getActiveTabs() { return new Map(); }
 export function addToFoundUrlCache(url) { if (url) foundUrlCache.add(url); }
 
 export async function startLoop(options = {}) {
-    if (isLooping && !options.force) return;
-    
-    console.log('START BATCH API MODE.');
+    if (isLooping && !options.force) {
+        console.log('%c [LOOPER] Already running, skipping start', 'color: orange; font-weight: bold;');
+        return;
+    }
+
+    console.log('%c ═══════════════════════════════════════', 'color: #4CAF50; font-weight: bold;');
+    console.log('%c [LOOPER] START BATCH API MODE', 'background: #4CAF50; color: white; font-weight: bold; font-size: 16px; padding: 4px;');
+    console.log('%c ═══════════════════════════════════════', 'color: #4CAF50; font-weight: bold;');
+
     onCompleteCallback = options.onComplete || null;
     onFoundCallback = options.onFound || null;
     onMissingFoundCallback = options.onMissingFound || null;
+
+    console.log('[LOOPER] Callbacks set:', {
+        hasOnFound: !!onFoundCallback,
+        hasOnComplete: !!onCompleteCallback,
+        hasOnMissingFound: !!onMissingFoundCallback
+    });
 
     isLooping = true;
     performLoop(); // Call the logic function
 }
 
 export function stopLoop() {
+    console.log('%c ═══════════════════════════════════════', 'color: #F44336; font-weight: bold;');
+    console.log('%c [LOOPER] STOP API MODE', 'background: #F44336; color: white; font-weight: bold; font-size: 16px; padding: 4px;');
+    console.log('%c ═══════════════════════════════════════', 'color: #F44336; font-weight: bold;');
+
     isLooping = false;
     activeRequests = 0;
     onCompleteCallback = null;
     onFoundCallback = null;
     onMissingFoundCallback = null;
     chrome.storage.local.remove(STORAGE_KEYS.LOOP_STATUS);
-    console.log('STOP API MODE.');
 }
