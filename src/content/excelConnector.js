@@ -9,6 +9,42 @@ if (window.hasSRKConnectorRun) {
 
   console.log("%c SRK: Excel Connector Script LOADED", "background: #222; color: #bada55; font-size: 14px");
 
+  // Field aliases for flexible field matching (imported from constants)
+  const FIELD_ALIASES = {
+    name: ['student name', 'name', 'studentname', 'student'],
+    phone: ['primaryphone', 'phone', 'phone number', 'mobile', 'cell', 'cell phone', 'contact', 'telephone', 'otherphone'],
+    grade: ['grade', 'grade level', 'level'],
+    StudentNumber: ['studentnumber', 'student id', 'sis id'],
+    SyStudentId: ['systudentid', 'student sis', 'studentid'],
+    daysOut: ['days out', 'dayssincepriorlda', 'days inactive', 'days', 'daysout']
+  };
+
+  /**
+   * Finds a field value in an object using aliases (case-insensitive)
+   * @param {Object} obj - The object to search in
+   * @param {String} fieldName - The internal field name (key in FIELD_ALIASES)
+   * @param {*} defaultValue - Default value if field not found
+   * @returns {*} The field value or defaultValue
+   */
+  function getFieldWithAlias(obj, fieldName, defaultValue = null) {
+    if (!obj || !fieldName) return defaultValue;
+
+    const aliases = FIELD_ALIASES[fieldName];
+    if (!aliases) return defaultValue;
+
+    // Try each alias (case-insensitive)
+    for (const alias of aliases) {
+      for (const key in obj) {
+        if (key.toLowerCase() === alias.toLowerCase()) {
+          const value = obj[key];
+          return value !== null && value !== undefined ? value : defaultValue;
+        }
+      }
+    }
+
+    return defaultValue;
+  }
+
   // Notify extension that connector is active
   chrome.runtime.sendMessage({
       type: "SRK_CONNECTOR_ACTIVE",
@@ -123,6 +159,7 @@ if (window.hasSRKConnectorRun) {
   /**
    * Handles incoming Master List data from the Office Add-in
    * Transforms the data from add-in format to extension format and stores it
+   * Uses FIELD_ALIASES to handle different capitalizations and field name variations
    */
   function handleMasterListData(data) {
       try {
@@ -130,23 +167,33 @@ if (window.hasSRKConnectorRun) {
           console.log("Data timestamp:", data.timestamp);
 
           // Transform students from add-in format to extension format
-          const transformedStudents = data.students.map(student => ({
-              name: student.studentName || 'Unknown',
-              phone: student.primaryPhone || student.otherPhone || null,
-              grade: student.grade !== undefined && student.grade !== null ? String(student.grade) : null,
-              StudentNumber: student.studentNumber || null,
-              SyStudentId: student.studentId || null,
-              daysout: parseInt(student.daysOut) || 0,
-              missingCount: 0,
-              url: student.gradeBook || null,
-              assignments: [],
-              // Additional fields that might be useful
-              lastLda: student.lastLda || null,
-              studentEmail: student.studentEmail || null,
-              personalEmail: student.personalEmail || null,
-              assigned: student.assigned || null,
-              outreach: student.outreach || null
-          }));
+          const transformedStudents = data.students.map(student => {
+              // Use getFieldWithAlias to match fields with different capitalizations and aliases
+              const name = getFieldWithAlias(student, 'name', 'Unknown');
+              const phone = getFieldWithAlias(student, 'phone');
+              const grade = getFieldWithAlias(student, 'grade');
+              const StudentNumber = getFieldWithAlias(student, 'StudentNumber');
+              const SyStudentId = getFieldWithAlias(student, 'SyStudentId');
+              const daysOut = getFieldWithAlias(student, 'daysOut');
+
+              return {
+                  name: name || 'Unknown',
+                  phone: phone,
+                  grade: grade !== undefined && grade !== null ? String(grade) : null,
+                  StudentNumber: StudentNumber,
+                  SyStudentId: SyStudentId,
+                  daysout: parseInt(daysOut) || 0,
+                  missingCount: 0,
+                  url: student.gradeBook || null,
+                  assignments: [],
+                  // Additional fields that might be useful
+                  lastLda: student.lastLda || null,
+                  studentEmail: student.studentEmail || null,
+                  personalEmail: student.personalEmail || null,
+                  assigned: student.assigned || null,
+                  outreach: student.outreach || null
+              };
+          });
 
           const lastUpdated = new Date().toLocaleString('en-US', {
               year: 'numeric',

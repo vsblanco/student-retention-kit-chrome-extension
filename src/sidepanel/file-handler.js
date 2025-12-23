@@ -1,7 +1,7 @@
 // File Handler - CSV/Excel import and export functionality
 import {
     STORAGE_KEYS,
-    CSV_FIELD_ALIASES,
+    FIELD_ALIASES,
     EXPORT_MASTER_LIST_COLUMNS,
     EXPORT_MISSING_ASSIGNMENTS_COLUMNS
 } from '../constants/index.js';
@@ -68,7 +68,7 @@ export function parseFileWithSheetJS(data, isCSV) {
             if (!row || row.length === 0) continue;
 
             const hasNameField = row.some(cell =>
-                CSV_FIELD_ALIASES.name.includes(normalizeHeader(cell))
+                FIELD_ALIASES.name.includes(normalizeHeader(cell))
             );
 
             if (hasNameField) {
@@ -84,12 +84,12 @@ export function parseFileWithSheetJS(data, isCSV) {
 
         // Map column indices using aliases
         const columnIndices = {
-            name: findColumnIndex(headers, CSV_FIELD_ALIASES.name),
-            phone: findColumnIndex(headers, CSV_FIELD_ALIASES.phone),
-            grade: findColumnIndex(headers, CSV_FIELD_ALIASES.grade),
-            StudentNumber: findColumnIndex(headers, CSV_FIELD_ALIASES.StudentNumber),
-            SyStudentId: findColumnIndex(headers, CSV_FIELD_ALIASES.SyStudentId),
-            daysOut: findColumnIndex(headers, CSV_FIELD_ALIASES.daysOut)
+            name: findColumnIndex(headers, FIELD_ALIASES.name),
+            phone: findColumnIndex(headers, FIELD_ALIASES.phone),
+            grade: findColumnIndex(headers, FIELD_ALIASES.grade),
+            StudentNumber: findColumnIndex(headers, FIELD_ALIASES.StudentNumber),
+            SyStudentId: findColumnIndex(headers, FIELD_ALIASES.SyStudentId),
+            daysOut: findColumnIndex(headers, FIELD_ALIASES.daysOut)
         };
 
         if (columnIndices.name === -1) {
