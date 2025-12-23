@@ -140,6 +140,7 @@ export function cacheDomElements() {
     elements.canvasConfigContent = document.getElementById('canvasConfigContent');
     elements.five9ConfigContent = document.getElementById('five9ConfigContent');
     elements.autoUpdateSelectModal = document.getElementById('autoUpdateSelectModal');
+    elements.syncActiveStudentToggleModal = document.getElementById('syncActiveStudentToggleModal');
     elements.powerAutomateUrlInput = document.getElementById('powerAutomateUrlInput');
     elements.powerAutomateStatusText = document.getElementById('powerAutomateStatusText');
     elements.powerAutomateStatusDot = document.getElementById('powerAutomateStatusDot');

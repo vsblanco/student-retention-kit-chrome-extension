@@ -337,12 +337,16 @@ export function openConnectionsModal(connectionType) {
     }
 
     // Load current settings into modal
-    chrome.storage.local.get(['autoUpdateMasterList', 'powerAutomateUrl', 'embedInCanvas', 'highlightColor', 'debugMode'], (result) => {
+    chrome.storage.local.get(['autoUpdateMasterList', 'syncActiveStudent', 'powerAutomateUrl', 'embedInCanvas', 'highlightColor', 'debugMode'], (result) => {
         // Load auto-update setting
         const setting = result.autoUpdateMasterList || 'always';
         if (elements.autoUpdateSelectModal) {
             elements.autoUpdateSelectModal.value = setting;
         }
+
+        // Load sync active student setting
+        const syncActiveStudent = result.syncActiveStudent !== undefined ? result.syncActiveStudent : true;
+        updateSyncActiveStudentModalUI(syncActiveStudent);
 
         // Load Power Automate URL
         const paUrl = result.powerAutomateUrl || '';
@@ -401,6 +405,22 @@ function updateDebugModeModalUI(isEnabled) {
 }
 
 /**
+ * Updates the sync active student toggle UI in the modal
+ * @param {boolean} isEnabled - Whether sync active student is enabled
+ */
+function updateSyncActiveStudentModalUI(isEnabled) {
+    if (!elements.syncActiveStudentToggleModal) return;
+
+    if (isEnabled) {
+        elements.syncActiveStudentToggleModal.className = 'fas fa-toggle-on';
+        elements.syncActiveStudentToggleModal.style.color = 'var(--primary-color)';
+    } else {
+        elements.syncActiveStudentToggleModal.className = 'fas fa-toggle-off';
+        elements.syncActiveStudentToggleModal.style.color = 'gray';
+    }
+}
+
+/**
  * Loads cache stats for the modal
  */
 async function loadCacheStatsForModal() {
@@ -436,6 +456,13 @@ export async function saveConnectionsSettings() {
         const newSetting = elements.autoUpdateSelectModal.value;
         settingsToSave.autoUpdateMasterList = newSetting;
         console.log(`Auto-update master list setting saved: ${newSetting}`);
+    }
+
+    // Save sync active student setting
+    if (elements.syncActiveStudentToggleModal) {
+        const syncEnabled = elements.syncActiveStudentToggleModal.classList.contains('fa-toggle-on');
+        settingsToSave.syncActiveStudent = syncEnabled;
+        console.log(`Sync Active Student setting saved: ${syncEnabled}`);
     }
 
     // Save Power Automate URL
@@ -558,6 +585,16 @@ export function toggleDebugModeModal() {
 
     const isCurrentlyOn = elements.debugModeToggleModal.classList.contains('fa-toggle-on');
     updateDebugModeModalUI(!isCurrentlyOn);
+}
+
+/**
+ * Toggles the sync active student setting in the modal
+ */
+export function toggleSyncActiveStudentModal() {
+    if (!elements.syncActiveStudentToggleModal) return;
+
+    const isCurrentlyOn = elements.syncActiveStudentToggleModal.classList.contains('fa-toggle-on');
+    updateSyncActiveStudentModalUI(!isCurrentlyOn);
 }
 
 /**
