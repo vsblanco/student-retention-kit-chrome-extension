@@ -11,7 +11,9 @@
       CUSTOM_KEYWORD: 'customKeyword',
       HIGHLIGHT_COLOR: 'highlightColor',
       EMBED_IN_CANVAS: 'embedInCanvas',
-      EXTENSION_STATE: 'extensionState'
+      EXTENSION_STATE: 'extensionState',
+      USE_SPECIFIC_DATE: 'useSpecificDate',
+      SPECIFIC_SUBMISSION_DATE: 'specificSubmissionDate'
   };
 
   // FETCH SETTINGS
@@ -30,16 +32,26 @@
 
   const highlightColor = settings[INSPECTOR_STORAGE_KEYS.HIGHLIGHT_COLOR] || '#ffff00';
   const customKeyword = settings[INSPECTOR_STORAGE_KEYS.CUSTOM_KEYWORD] || '';
-  
+  const useSpecificDate = settings[INSPECTOR_STORAGE_KEYS.USE_SPECIFIC_DATE] || false;
+  const specificDate = settings[INSPECTOR_STORAGE_KEYS.SPECIFIC_SUBMISSION_DATE] || null;
+
   // Determine Keyword
   let searchKeyword;
   if (customKeyword) {
       searchKeyword = customKeyword;
   } else {
-      const now = new Date();
+      let targetDate = new Date();
+
+      // If using specific date, parse and use that instead of today's date
+      if (useSpecificDate && specificDate) {
+          const [year, month, day] = specificDate.split('-').map(Number);
+          targetDate = new Date(year, month - 1, day); // month is 0-indexed
+          console.log(`[Visual Inspector] Using specific date: ${specificDate} -> ${targetDate.toDateString()}`);
+      }
+
       const opts = { month: 'short', day: 'numeric' };
       // Format: "Oct 23 at"
-      searchKeyword = now.toLocaleDateString('en-US', opts).replace(',', '') + ' at';
+      searchKeyword = targetDate.toLocaleDateString('en-US', opts).replace(',', '') + ' at';
   }
 
   console.log(`[Visual Inspector] Running. Keyword: "${searchKeyword}"`);
