@@ -94,6 +94,12 @@ if (window.hasSRKConnectorRun) {
           console.log("%c SRK Connector: Selected Students Received!", "color: purple; font-weight: bold");
           handleSelectedStudents(event.data.data);
       }
+
+      // Handle Office User Info
+      else if (event.data.type === "SRK_OFFICE_USER_INFO") {
+          console.log("%c SRK Connector: Office User Info Received!", "color: cyan; font-weight: bold");
+          handleOfficeUserInfo(event.data.data);
+      }
   });
 
   /**
@@ -294,6 +300,65 @@ if (window.hasSRKConnectorRun) {
 
       } catch (error) {
           console.error("%c Error processing Selected Students data:", "color: red; font-weight: bold", error);
+      }
+  }
+
+  /**
+   * Handles incoming Office User Info from the Office Add-in
+   * Stores the authenticated user's name, email, and other profile data
+   * @param {Object} data - The user info data
+   */
+  function handleOfficeUserInfo(data) {
+      try {
+          console.log(`Processing Office User Info`);
+          console.log(`  Name: ${data.name}`);
+          console.log(`  Email: ${data.email}`);
+          console.log("User info timestamp:", data.timestamp);
+
+          // Validate required fields
+          if (!data.name && !data.email) {
+              console.warn("Office user info missing both name and email");
+              return;
+          }
+
+          // Store the user info
+          const userInfo = {
+              name: data.name || null,
+              email: data.email || null,
+              userId: data.userId || null,
+              jobTitle: data.jobTitle || null,
+              department: data.department || null,
+              officeLocation: data.officeLocation || null,
+              lastUpdated: new Date().toISOString(),
+              sourceTimestamp: data.timestamp || null
+          };
+
+          chrome.storage.local.set({
+              officeUserInfo: userInfo
+          }, () => {
+              console.log(`%c ✓ Office User Info Stored Successfully!`, "color: cyan; font-weight: bold");
+              console.log(`   Name: ${userInfo.name}`);
+              console.log(`   Email: ${userInfo.email}`);
+
+              // Notify the extension that user info has been updated
+              chrome.runtime.sendMessage({
+                  type: "SRK_OFFICE_USER_INFO",
+                  userInfo: userInfo,
+                  timestamp: Date.now()
+              }).catch(() => {
+                  // Extension might not be ready, that's ok
+              });
+          });
+
+      } catch (error) {
+          console.error("%c Error processing Office User Info:", "color: red; font-weight: bold", error);
+
+          // Notify extension of error
+          chrome.runtime.sendMessage({
+              type: "SRK_OFFICE_USER_INFO_ERROR",
+              error: error.message,
+              timestamp: Date.now()
+          }).catch(() => {});
       }
   }
 

@@ -46,7 +46,8 @@ export const MESSAGE_TYPES = {
     SRK_OFFICE_ADDIN_CONNECTED: 'SRK_OFFICE_ADDIN_CONNECTED',
     SRK_MASTER_LIST_UPDATED: 'SRK_MASTER_LIST_UPDATED',
     SRK_MASTER_LIST_ERROR: 'SRK_MASTER_LIST_ERROR',
-    SRK_SELECTED_STUDENTS: 'SRK_SELECTED_STUDENTS'
+    SRK_SELECTED_STUDENTS: 'SRK_SELECTED_STUDENTS',
+    SRK_OFFICE_USER_INFO: 'SRK_OFFICE_USER_INFO'
 };
 
 /**
@@ -101,7 +102,9 @@ export const STORAGE_KEYS = {
     HIGHLIGHT_COLOR: 'highlightRowColor',
     // Specific Submission Date Settings
     USE_SPECIFIC_DATE: 'useSpecificDate',
-    SPECIFIC_SUBMISSION_DATE: 'specificSubmissionDate'
+    SPECIFIC_SUBMISSION_DATE: 'specificSubmissionDate',
+    // Office User Info
+    OFFICE_USER_INFO: 'officeUserInfo'
 };
 
 /**
